@@ -1,0 +1,116 @@
+# .github/workflows/youtube_pipeline.yml
+# Fully automated YouTube pipeline — runs on schedule, zero manual work
+name: YouTube Automation Pipeline
+
+on:
+  schedule:
+    # All times in UTC (PKT = UTC+5, so 9AM PKT = 4AM UTC)
+    # Shorts — Mon, Wed, Fri at 9AM PKT
+    - cron: '0 4 * * 1'   # Monday Short
+    - cron: '0 4 * * 3'   # Wednesday Short
+    - cron: '0 4 * * 5'   # Friday Short
+    # Long-form Tutorial — Tuesday at 4AM UTC
+    - cron: '0 4 * * 2'
+    # Weekly Recap — Sunday at 4AM UTC
+    - cron: '0 4 * * 0'
+
+  # Manual trigger with mode selection (for testing)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Pipeline mode'
+        required: true
+        default: 'short'
+        type: choice
+        options:
+          - short
+          - longform
+          - recap
+      dry_run:
+        description: 'Dry run (skip upload)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      recap_data:
+        description: 'Recap data (for recap mode only)'
+        required: false
+        default: ''
+
+jobs:
+  youtube-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+            fonts-liberation fonts-dejavu-core
+          ffmpeg -version | head -1
+          echo "✅ Fonts installed:"
+          fc-list | grep -i "liberation\|dejavu" | head -5
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Determine MODE
+        id: mode
+        run: |
+          # If manual trigger, use input mode
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "MODE=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+            echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_OUTPUT
+          else
+            # Auto-detect mode from schedule
+            DAY=$(date +%u)  # 1=Mon, 2=Tue ... 7=Sun
+            if [ "$DAY" = "7" ]; then
+              echo "MODE=recap" >> $GITHUB_OUTPUT
+            elif [ "$DAY" = "2" ]; then
+              echo "MODE=longform" >> $GITHUB_OUTPUT
+            else
+              echo "MODE=short" >> $GITHUB_OUTPUT
+            fi
+            echo "DRY_RUN=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run YouTube Pipeline
+        env:
+          MODE:                     ${{ steps.mode.outputs.MODE }}
+          DRY_RUN:                  ${{ steps.mode.outputs.DRY_RUN }}
+          RECAP_DATA:               ${{ github.event.inputs.recap_data }}
+          GEMINI_API_KEY:           ${{ secrets.GEMINI_API_KEY }}
+          ELEVENLABS_API_KEY:       ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID:      ${{ secrets.ELEVENLABS_VOICE_ID }}
+          PEXELS_API_KEY:           ${{ secrets.PEXELS_API_KEY }}
+          YOUTUBE_CLIENT_ID:        ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET:    ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN:    ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          LINKEDIN_ACCESS_TOKEN:    ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN:      ${{ secrets.LINKEDIN_PERSON_URN }}
+          DISCORD_WEBHOOK_YOUTUBE:  ${{ secrets.DISCORD_WEBHOOK_YOUTUBE }}
+          CHANNEL_HANDLE:           ${{ secrets.CHANNEL_HANDLE }}
+        run: |
+          echo "🎬 Running pipeline: MODE=$MODE | DRY_RUN=$DRY_RUN"
+          node src/youtube_index.js
+
+      - name: Notify failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_YOUTUBE: ${{ secrets.DISCORD_WEBHOOK_YOUTUBE }}
+        run: |
+          curl -s -X POST "$DISCORD_WEBHOOK_YOUTUBE" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"❌ YouTube pipeline FAILED on GitHub Actions. Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
