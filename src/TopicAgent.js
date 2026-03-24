@@ -1,4 +1,4 @@
-// TopicAgent.js — Finds trending topics for AI Automation & SaaS niche
+// TopicAgent.js — Finds TRENDING AI/tech topics via Gemini knowledge
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
@@ -25,60 +25,7 @@ function saveUsedTopics(topics) {
   }
 }
 
-const CHANNEL_IDENTITY = `
-CHANNEL: "Umair Bilal" — Pakistani dev who builds real AI systems, trading bots, and SaaS apps.
-NICHE: AI Automation + SaaS Building (targeting US/UK/Australia devs and indie hackers)
-PROOF POINTS:
-- Built live AI gold trading system (5 agents on Render, 1.44M candles backtested)
-- Shipped 15+ production apps with 5,100+ users across 70 countries
-- Apps: FarahGPT (AI Islamic habit app), Muslifie (Muslim travel marketplace), MyAiPal, Voisbe
-- Stack: Flutter, Node.js, Firebase, MongoDB, Stripe, RevenueCat, GitHub Actions
-TONE: Casual, direct, zero fluff — shows real code, real results, real failures
-AUDIENCE: Developers, indie hackers, SaaS builders — English speaking, Tier 1 countries
-`;
-
-const SHORT_TOPIC_IDEAS = [
-  'AI agent that runs automatically on GitHub Actions',
-  'How I use Gemini API for free to power my apps',
-  'Node.js automation trick most devs dont know',
-  'My Flutter app hit 5000 users — what I did differently',
-  'Building a SaaS solo from Pakistan — what nobody tells you',
-  'My AI trading bot fired 15 signals today automatically',
-  'RevenueCat vs Stripe for mobile apps — real comparison',
-  'Firebase free tier limits that will surprise you',
-  'How I automated my entire content pipeline',
-  'The automation stack I use for all my products',
-  'How I deploy 5 AI agents for free on Render',
-  'Flutter tip that saved me 3 hours of debugging',
-  'Why I switched from Firebase to MongoDB for this feature',
-  'GitHub Actions is basically a free server — here is how',
-  'My app earned money while I slept — here is the setup',
-  'One line of Node.js that changed how I build APIs',
-  'How I get US users from Pakistan with zero ads',
-  'The ElevenLabs trick I use for realistic AI voiceovers',
-  'How I backtested a trading strategy on 1.4 million candles',
-  'Why indie devs should build SaaS not apps',
-];
-
-const LONGFORM_TOPIC_IDEAS = [
-  'I built an AI trading signal agent from scratch — full walkthrough',
-  'How I launched a Flutter app to 5000 users with zero marketing budget',
-  'Building 5 AI agents that run 24/7 on Render for free',
-  'The complete stack I use to build and ship SaaS apps solo',
-  'I automated my YouTube channel with AI — here is how it works',
-  'FarahGPT: from idea to 5100 users — full story',
-  'How I backtested a trading system on 1.4 million candles',
-  'GitHub Actions as your free backend automation server',
-  'Building Muslifie: a marketplace with 200+ companies registered',
-  'How to go from freelancer to indie hacker — my real story',
-  'Node.js multi-agent system architecture explained with real code',
-  'How I use RevenueCat to monetize Flutter apps — full setup',
-  'Building a real-time chat with Flutter + Firestore from scratch',
-  'Stripe Connect for marketplaces — how I built autopayouts in Muslifie',
-  'My complete Flutter + Firebase + MongoDB backend architecture',
-];
-
-// Retry wrapper for Gemini API calls — retries on ANY error, fixed 5 s delay
+// ── Retry wrapper ─────────────────────────────────────────────────────────────
 async function withRetry(fn, retries = 3, delayMs = 5000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -100,43 +47,42 @@ export class TopicAgent {
     this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
 
-  getSeedIdea(ideas, mode) {
-    // Use timestamp-based index for better variety (changes hourly)
-    const hourSlot = Math.floor(Date.now() / (60 * 60 * 1000));
-    const dayIndex = new Date().getDay();
-    return ideas[(dayIndex + hourSlot) % ideas.length];
-  }
-
   async getTopic(mode) {
     if (mode === 'recap') {
-      const recapData = process.env.RECAP_DATA || 'Weekly trading and dev recap';
       return {
-        title: 'Weekly Recap',
-        hook: recapData.substring(0, 100),
-        angle: 'Real results from a real developer',
-        context: recapData,
+        title: 'Weekly AI News Recap',
+        hook: 'Here is everything that happened in AI this week that actually matters.',
+        angle: 'Dev perspective on the week in AI',
+        context: 'Weekly recap of biggest AI and tech news',
         isRecap: true,
       };
     }
 
-    const ideas = mode === 'short' ? SHORT_TOPIC_IDEAS : LONGFORM_TOPIC_IDEAS;
-    const seedIdea = this.getSeedIdea(ideas, mode);
+    console.log('  🔍 Searching for trending AI topics...');
 
-    const prompt = `You are a YouTube growth strategist specializing in the AI/dev niche.
+    const prompt = `Today is ${new Date().toDateString()}.
 
-${CHANNEL_IDENTITY}
+Search your knowledge for the MOST trending and talked-about AI/tech topics RIGHT NOW in the last few days. Think about:
+- New model releases (Claude, GPT, Gemini, Llama, Mistral, etc.)
+- Big AI product launches or updates
+- Viral AI tools developers are using
+- Controversial AI news or drama
+- New coding tools, agents, or automation breakthroughs
+- AI startup funding, acquisitions, or shutdowns
+- Developer tools going viral on X/Twitter or HackerNews
 
-SEED IDEA: "${seedIdea}"
+Pick the single HOTTEST topic that developers and indie hackers are actively discussing right now.
 
-Based on this seed idea, generate a fresh and specific ${mode === 'short' ? 'YouTube Short (45-60s)' : 'YouTube video (8-12 min)'} topic.
+Generate a ${mode === 'short' ? 'YouTube Short (45-55s)' : 'YouTube video (8-12 min)'} topic about it.
 
 Respond ONLY in valid JSON (no markdown, no explanation):
 {
-  "title": "compelling topic title",
-  "hook": "first 3 second hook sentence",
-  "angle": "what makes this unique",
-  "searchKeyword": "main keyword",
-  "context": "2-3 sentences of background info"
+  "trendingEvent": "what exactly is trending (1 sentence)",
+  "title": "punchy topic title referencing the trend",
+  "hook": "first 3 second hook — shocking or provocative statement about the trend",
+  "angle": "developer/builder angle on why this matters",
+  "context": "3-4 sentences of background on the trending topic with specific facts",
+  "searchKeyword": "main keyword"
 }`;
 
     const usedTopics = loadUsedTopics();
@@ -149,8 +95,9 @@ Respond ONLY in valid JSON (no markdown, no explanation):
         });
         const text = response.text.trim().replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(text);
+        if (!parsed.title || !parsed.context) throw new Error('Missing fields');
 
-        // Deduplication: if this title was used in the last 30 runs, throw so withRetry regenerates
+        // Deduplication check
         const isDuplicate = usedTopics.some(
           t => t.toLowerCase() === (parsed.title || '').toLowerCase()
         );
@@ -161,22 +108,28 @@ Respond ONLY in valid JSON (no markdown, no explanation):
         return parsed;
       });
 
-      // Persist the new title (cap list at MAX_USED_TOPICS)
+      // Persist used topic
       usedTopics.unshift(result.title);
       if (usedTopics.length > MAX_USED_TOPICS) usedTopics.length = MAX_USED_TOPICS;
       saveUsedTopics(usedTopics);
 
-      console.log(`  ✅ Topic from Gemini: "${result.title}"`);
+      console.log(`  🔥 Trending: ${result.trendingEvent}`);
       return result;
     } catch (err) {
       console.warn('  ⚠️  TopicAgent fell back to seed idea:', err.message);
-      return {
-        title: seedIdea,
-        hook: 'Here is something most developers never think about...',
-        angle: 'Real developer showing real results',
-        searchKeyword: 'AI automation developer',
-        context: seedIdea,
-      };
+
+      // Fallback seeds — all about AI trends, not about Umair
+      const seeds = [
+        { title: 'Claude 4 Just Dropped — Is GPT-4 Dead?', hook: 'Anthropic just changed everything.', context: 'Claude 4 released with major capability jumps. Developers are switching from GPT-4 in droves.' },
+        { title: 'Every Developer Is Using This AI Tool Now', hook: 'This tool went from 0 to 1M users in 2 weeks.', context: 'A new AI coding tool is going viral across developer communities on X and HackerNews.' },
+        { title: 'OpenAI Just Released Something Huge', hook: 'OpenAI dropped a new model and nobody is talking about it enough.', context: 'OpenAI latest release is changing how developers build AI applications.' },
+        { title: 'Google Gemini vs Claude vs GPT — 2025 Real Comparison', hook: 'I tested all three for a week. Here is what actually matters.', context: 'Developers are trying to pick the best AI API for their apps. Real comparison with code.' },
+        { title: 'This AI Agent Framework Is Taking Over GitHub', hook: 'This repo got 50k stars in one week.', context: 'A new AI agent framework is going viral on GitHub with developers using it to build autonomous systems.' },
+        { title: 'Cursor AI Is Replacing Junior Devs — Here Is Proof', hook: 'I built a full app in 2 hours using only Cursor.', context: 'AI coding assistants are getting so good that entire apps are being built without writing code manually.' },
+        { title: 'The AI Startup That Just Raised $1B', hook: 'A startup nobody heard of just raised a billion dollars for AI.', context: 'Major AI funding rounds are happening weekly. Here is what it means for developers building in the space.' },
+      ];
+      const pick = seeds[new Date().getDay() % seeds.length];
+      return { ...pick, angle: 'Developer perspective', searchKeyword: 'AI news', trendingEvent: pick.hook };
     }
   }
 }

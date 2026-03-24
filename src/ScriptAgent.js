@@ -1,22 +1,19 @@
-// ScriptAgent.js — Writes full YouTube scripts via Gemini 2.0 Flash
+// ScriptAgent.js — Writes scripts about TRENDING AI topics, dev commentary style
 import { GoogleGenAI } from '@google/genai';
 
 const CHANNEL_VOICE = `
-You are writing for Umair Bilal — a Pakistani indie developer with a casual, direct, zero-fluff style.
+You are writing scripts for a YouTube channel by a dev who comments on AI/tech trends.
 
-KEY FACTS TO INJECT NATURALLY (pick the most relevant ones):
-- Built live AI gold trading system: 5 agents on Render, backtested on 1.44M candles (2021-2026)
-- FarahGPT: AI Islamic habit app, 5,100+ users, $7.99-$12.99/mo subscriptions via RevenueCat
-- Muslifie: Muslim travel marketplace, 200+ international companies registered
-- Shipped 15+ production apps across iOS and Android
-- Stack: Flutter/Dart, Node.js, Firebase, MongoDB, Stripe, RevenueCat, GitHub Actions, Render
-- Building from Multan, Pakistan — users across 70+ countries
+CHANNEL STYLE:
+- Reacts to and explains trending AI news from a DEVELOPER'S perspective
+- Casual, direct, zero corporate speak
+- Gets to the point immediately — no "Hey guys welcome back"
+- Explains WHY it matters for developers and builders
+- Gives actual technical context, not just hype
+- Occasionally drops real dev credibility: "I've shipped 15 apps", "I use this in production"
+- Ends with opinion or hot take, not a generic CTA
 
-VOICE RULES:
-- Casual and direct. No corporate speak. No "In today's video..."
-- Uses specific numbers always (not "many users" — "5,100 users")
-- Admits failures and what didn't work — authenticity beats polish
-- Ends with real CTA: "Subscribe if you're building something real"
+THE TOPIC IS ALWAYS THE TRENDING EVENT — not about the host's personal projects.
 `;
 
 // Retry wrapper for Gemini API calls — retries on ANY error, fixed 5 s delay
@@ -46,43 +43,46 @@ export class ScriptAgent {
     const isRecap = topic.isRecap === true;
 
     const formatInstructions = isRecap ? `
-FORMAT: Weekly Recap (3-5 min)
-- Hook with biggest result from the week
-- Trading agent results — signals, win/loss
-- What I built or shipped this week  
-- One lesson learned
-- CTA: "Follow along — I post every week"
+FORMAT: Weekly AI News Recap (3-5 min)
+- Hook: "Here is everything that happened in AI this week"
+- Cover 3-5 biggest AI events with brief commentary on each
+- End with: hot take on where AI is heading
 ` : isShort ? `
-FORMAT: YouTube Short (40-50 seconds MAX — keep voiceoverText under 120 words)
-- Line 1 (0-3s): HOOK — one shocking statement or number. No intro.
-- Lines 2-6 (3-40s): Fast value. One idea per line. Max 10 words per line.
-- Final line: CTA — "Follow for more"
-- NO filler. Sound like a real dev texting a friend.
+FORMAT: YouTube Short (35-45 seconds MAX — voiceoverText MUST be under 60 words, NO EXCEPTIONS)
+- Line 1 (0-3s): HOOK — one punchy statement about the trending topic. No intro.
+- Lines 2-5 (3-35s): Fast explanation of what happened and why devs care. One idea per line. Be ruthlessly brief.
+- Final line: Hot take or opinion — "This changes everything" / "Nobody's talking about this" etc.
+- Sound like a dev reacting to news in real time. Raw, not polished.
 ` : `
-FORMAT: Long-form Tutorial (8-12 minutes)
-- Intro (0-30s): Hook with real numbers. Skip the fluff.
-- Problem (30s-90s): Specific pain point.
-- Build/Demo (90s-7min): Step by step. Real code. Real decisions.
-- Results (7-9min): Actual numbers. What worked, what failed.
-- CTA (last 30s): Subscribe + what's next
+FORMAT: Long-form video (8-12 minutes)
+- Hook (0-30s): What happened and why it's a big deal — with specifics
+- Context (30s-2min): Background on the company/product/trend
+- What it means for developers (2-7min): Practical implications, code examples, API changes
+- Hot take (7-9min): Opinion — is this good or bad for the dev ecosystem?
+- CTA (last 30s): "Subscribe for weekly AI news from a developer's perspective"
 `;
 
     const prompt = `${CHANNEL_VOICE}
 
-TOPIC: ${topic.title}
+TRENDING TOPIC: ${topic.title}
+TRENDING EVENT: ${topic.trendingEvent || topic.context}
 HOOK: ${topic.hook}
 CONTEXT: ${topic.context}
+ANGLE: ${topic.angle}
 
 ${formatInstructions}
 
+Write a script about THIS TRENDING TOPIC. The content is about the trend, not about the host.
+The host is just the developer voice reacting to and explaining the news.
+
 Respond ONLY in valid JSON (no markdown):
 {
-  "title": "SEO-optimized YouTube title (under 65 chars)",
-  "voiceoverText": "complete script for TTS — natural speech, no stage directions",
-  "description": "YouTube description max 400 chars",
-  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8"],
-  "linkedInCaption": "LinkedIn version 3 short paragraphs ending with [VIDEO_URL]",
-  "visualNotes": "2-3 words for background (e.g. dark code editor)"
+  "title": "SEO YouTube title about the trending topic (under 65 chars)",
+  "voiceoverText": "complete script for TTS — natural speech, reacting to the trend",
+  "description": "YouTube description about the trending topic, max 400 chars",
+  "tags": ["ai","artificial intelligence","tag3","tag4","tag5","tag6","tag7","tag8"],
+  "linkedInCaption": "LinkedIn take on this AI trend, 3 short paragraphs, ends with [VIDEO_URL]",
+  "visualNotes": "2-3 words describing visuals (e.g. AI robot screen, dark tech)"
 }`;
 
     const script = await withRetry(async () => {
