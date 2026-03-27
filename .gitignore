@@ -17,6 +17,9 @@ tmp/
 .DS_Store
 Thumbs.db
 
+# Instagram session cache (contains login state — never commit)
+ig_session.json
+
 # Logs
 *.log
 npm-debug.log*

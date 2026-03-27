@@ -100,6 +100,8 @@ jobs:
           YOUTUBE_REFRESH_TOKEN:    ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           LINKEDIN_ACCESS_TOKEN:    ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_PERSON_URN:      ${{ secrets.LINKEDIN_PERSON_URN }}
+          INSTAGRAM_USERNAME:       ${{ secrets.INSTAGRAM_USERNAME }}
+          INSTAGRAM_PASSWORD:       ${{ secrets.INSTAGRAM_PASSWORD }}
           DISCORD_WEBHOOK_YOUTUBE:  ${{ secrets.DISCORD_WEBHOOK_YOUTUBE }}
           CHANNEL_HANDLE:           ${{ secrets.CHANNEL_HANDLE }}
         run: |

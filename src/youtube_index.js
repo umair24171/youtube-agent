@@ -1,6 +1,7 @@
 // youtube_index.js — Main Pipeline Entry
 // Runs automatically via GitHub Actions | Manual: npm run short/longform/recap
 import 'dotenv/config';
+import fs                  from 'fs';
 import { TopicAgent }      from './TopicAgent.js';
 import { ScriptAgent }     from './ScriptAgent.js';
 import { VoiceAgent }      from './VoiceAgent.js';
@@ -8,6 +9,7 @@ import { VideoAgent }      from './VideoAgent.js';
 import { ThumbnailAgent }  from './ThumbnailAgent.js';
 import { UploadAgent }     from './UploadAgent.js';
 import { CrossPostAgent }  from './CrossPostAgent.js';
+import { InstagramAgent }  from './InstagramAgent.js';
 import { DiscordNotifier } from './DiscordNotifier.js';
 
 const MODE     = process.env.MODE      || 'short';   // short | longform | recap
@@ -78,6 +80,18 @@ async function runPipeline() {
       console.log('\n[6/7] SKIPPED (dry run)');
     }
 
+    // ── STEP 6.5: Instagram Reel ────────────────────────────────────
+    if (!DRY_RUN) {
+      console.log('\n[6.5/7] Posting to Instagram...');
+      const igAgent = new InstagramAgent();
+      const igUrl = await igAgent.post(videoPath, script);
+      if (igUrl) {
+        console.log(`  ✅ Instagram Reel live: ${igUrl}`);
+      }
+    } else {
+      console.log('\n[6.5/7] SKIPPED (dry run)');
+    }
+
     // ── STEP 7: Cross Post ──────────────────────────────────────────
     if (!DRY_RUN) {
       console.log('\n[7/7] Cross-posting...');
@@ -86,6 +100,11 @@ async function runPipeline() {
       console.log('  ✅ Posted to LinkedIn');
     } else {
       console.log('\n[7/7] SKIPPED (dry run)');
+    }
+
+    // ── CLEANUP: remove temp files now that all cross-posting is done ─
+    for (const p of [videoPath, thumbnailPath, audioPath]) {
+      try { fs.unlinkSync(p); } catch {}
     }
 
     // ── DONE ────────────────────────────────────────────────────────

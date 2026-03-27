@@ -85,9 +85,8 @@ export class UploadAgent {
       console.warn(`  ⚠️  Thumbnail upload failed (channel may need verification): ${thumbErr.message}`);
     }
 
-    // Cleanup
-    try { fs.unlinkSync(videoPath); } catch {}
-    try { fs.unlinkSync(thumbnailPath); } catch {}
+    // NOTE: files are intentionally NOT deleted here.
+    // The pipeline cleans them up after all cross-posting steps (Instagram, LinkedIn, etc.) are done.
 
     return `https://youtu.be/${videoId}`;
   }
