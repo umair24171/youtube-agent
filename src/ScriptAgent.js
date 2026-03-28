@@ -1,22 +1,50 @@
-// ScriptAgent.js — Writes scripts about TRENDING AI topics, dev commentary style
+// ScriptAgent.js — Writes VIRAL scripts about TRENDING AI topics
 import { GoogleGenAI } from '@google/genai';
 
 const CHANNEL_VOICE = `
-You are writing scripts for a YouTube channel by a dev who comments on AI/tech trends.
+You are writing scripts for a YouTube Shorts channel covering AI/tech news from a developer's perspective.
 
 CHANNEL STYLE:
-- Reacts to and explains trending AI news from a DEVELOPER'S perspective
-- Casual, direct, zero corporate speak
-- Gets to the point immediately — no "Hey guys welcome back"
-- Explains WHY it matters for developers and builders
-- Gives actual technical context, not just hype
-- Occasionally drops real dev credibility: "I've shipped 15 apps", "I use this in production"
-- Ends with opinion or hot take, not a generic CTA
-
-THE TOPIC IS ALWAYS THE TRENDING EVENT — not about the host's personal projects.
+- Raw, fast, zero fluff — like a dev reacting to breaking news
+- No "Hey guys welcome back" — ever
+- Gets to the point in the first 2 seconds
+- Casual language: "bro", "nobody's talking about this", "this is insane"
+- Ends with a hot take or opinion, never a generic "like and subscribe"
 `;
 
-// Retry wrapper for Gemini API calls — retries on ANY error, fixed 5 s delay
+// ── Hook formula bank (from proven viral patterns) ────────────────────────────
+const HOOK_FORMULAS = `
+HOOK FORMULAS — pick the one that fits the topic best:
+
+CURIOSITY HOOKS (make them wonder what happens next):
+- "I was wrong about [belief] — and it cost me [consequence]."
+- "The real reason [X] is happening isn't what anyone is telling you."
+- "[Company] just did something and nobody noticed."
+- "This changes everything about [topic] — and it dropped yesterday."
+
+CONTRARIAN HOOKS (disagree with popular opinion):
+- "Unpopular opinion: [bold statement about the trend]"
+- "Everyone is wrong about [AI topic]. Here's the truth."
+- "Stop using [popular tool]. This is better and free."
+- "[Common belief] is dead. I have proof."
+
+STORY HOOKS (create immediate tension):
+- "Yesterday [X happened] and I haven't stopped thinking about it."
+- "I tested [new AI tool] for 48 hours. Here's what they don't show you."
+- "[Company] just [action] and developers are furious."
+
+VALUE HOOKS (promise immediate payoff):
+- "How to [desirable outcome] using [new AI thing] — in under 5 minutes."
+- "[Number] things [new AI release] can do that GPT-4 still can't."
+- "This one [AI tool/feature] will save you [X hours] every week."
+
+SHOCK HOOKS (pure pattern interrupt):
+- "[Big company] just got destroyed by a [small thing] nobody saw coming."
+- "A [small team/solo dev] just [did something] that [big company] spent years on."
+- "[New AI] just passed [benchmark] that experts said was 5 years away."
+`;
+
+// Retry wrapper
 async function withRetry(fn, retries = 3, delayMs = 5000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -39,55 +67,69 @@ export class ScriptAgent {
   }
 
   async generate(topic, mode) {
-    const isShort = mode === 'short';
-    const isRecap = topic.isRecap === true;
+    const isShort  = mode === 'short';
+    const isRecap  = topic.isRecap === true;
 
-    const formatInstructions = isRecap ? `
+    const formatInstructions = isRecap
+      ? `
 FORMAT: Weekly AI News Recap (3-5 min)
-- Hook: "Here is everything that happened in AI this week"
-- Cover 3-5 biggest AI events with brief commentary on each
-- End with: hot take on where AI is heading
-` : isShort ? `
-FORMAT: YouTube Short (35-45 seconds MAX — voiceoverText MUST be under 60 words, NO EXCEPTIONS)
-- Line 1 (0-3s): HOOK — one punchy statement about the trending topic. No intro.
-- Lines 2-5 (3-35s): Fast explanation of what happened and why devs care. One idea per line. Be ruthlessly brief.
-- Final line: Hot take or opinion — "This changes everything" / "Nobody's talking about this" etc.
-- Sound like a dev reacting to news in real time. Raw, not polished.
-` : `
+- Hook: shocking one-liner about the biggest story of the week
+- Cover 3-5 biggest AI events with brief dev commentary on each
+- End with: one strong hot take on where AI is heading
+`
+      : isShort
+      ? `
+FORMAT: YouTube Short (35-45 seconds MAX)
+CRITICAL: voiceoverText MUST be under 65 words. Count them. No exceptions.
+
+STRUCTURE:
+- Line 1 (0-3s): HOOK — use one of the hook formulas. Make it impossible to scroll past.
+- Lines 2-4 (3-35s): What happened, why devs care, one key fact or number. Ruthlessly brief.
+- Last line: Hot take — strong opinion, no "like and subscribe"
+
+TONE: Like a dev texting their friend about breaking news. Raw, fast, zero polish.
+`
+      : `
 FORMAT: Long-form video (8-12 minutes)
-- Hook (0-30s): What happened and why it's a big deal — with specifics
-- Context (30s-2min): Background on the company/product/trend
-- What it means for developers (2-7min): Practical implications, code examples, API changes
-- Hot take (7-9min): Opinion — is this good or bad for the dev ecosystem?
-- CTA (last 30s): "Subscribe for weekly AI news from a developer's perspective"
+- Hook (0-30s): Shocking statement about the trend — with a specific number or fact
+- Context (30s-2min): What happened, who's involved, timeline
+- Dev implications (2-7min): What this means for developers building right now
+- Hot take (7-9min): Strong opinion — is this good or bad for the ecosystem?
+- CTA (last 30s): "Follow for AI news from a dev who actually ships"
 `;
 
     const prompt = `${CHANNEL_VOICE}
 
 TRENDING TOPIC: ${topic.title}
 TRENDING EVENT: ${topic.trendingEvent || topic.context}
-HOOK: ${topic.hook}
+HOOK IDEA: ${topic.hook}
 CONTEXT: ${topic.context}
 ANGLE: ${topic.angle}
 
+${HOOK_FORMULAS}
+
 ${formatInstructions}
 
-Write a script about THIS TRENDING TOPIC. The content is about the trend, not about the host.
-The host is just the developer voice reacting to and explaining the news.
+RULES:
+1. The hook must stop someone mid-scroll. Use the formulas above — do not write a boring opener.
+2. Every sentence must earn its place. If it doesn't add info or tension, cut it.
+3. Never start with "In today's video", "Hey everyone", or any greeting.
+4. Use specific numbers and facts when possible — vague claims don't go viral.
+5. The topic is the trending event — not about the host's background.
 
-Respond ONLY in valid JSON (no markdown):
+Respond ONLY in valid JSON (no markdown, no backticks):
 {
-  "title": "SEO YouTube title about the trending topic (under 65 chars)",
-  "voiceoverText": "complete script for TTS — natural speech, reacting to the trend",
-  "description": "YouTube description about the trending topic, max 400 chars",
-  "tags": ["ai","artificial intelligence","tag3","tag4","tag5","tag6","tag7","tag8"],
-  "linkedInCaption": "LinkedIn take on this AI trend, 3 short paragraphs, ends with [VIDEO_URL]",
-  "visualNotes": "2-3 words describing visuals (e.g. AI robot screen, dark tech)"
+  "title": "YouTube title — punchy, SEO, under 65 chars, includes main keyword",
+  "voiceoverText": "complete script — natural speech, under 65 words for shorts",
+  "description": "YouTube description about the topic, max 400 chars, includes keywords",
+  "tags": ["ai","tag2","tag3","tag4","tag5","tag6","tag7","tag8"],
+  "linkedInCaption": "LinkedIn hot take on this trend — 3 punchy paragraphs, ends with [VIDEO_URL]",
+  "visualNotes": "2-3 words describing best visuals (e.g. robot screen dark, code terminal)"
 }`;
 
     const script = await withRetry(async () => {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model  : 'gemini-2.5-flash',
         contents: prompt,
       });
 
@@ -98,9 +140,18 @@ Respond ONLY in valid JSON (no markdown):
         if (!parsed.voiceoverText || !parsed.title) {
           throw new Error('Missing required fields in script response');
         }
+
+        // Enforce word count for Shorts
+        if (isShort) {
+          const wordCount = parsed.voiceoverText.split(/\s+/).length;
+          if (wordCount > 80) {
+            throw new Error(`Script too long: ${wordCount} words (max 65) — regenerating`);
+          }
+        }
+
         return parsed;
       } catch (parseErr) {
-        throw new Error(`Script JSON parse failed: ${parseErr.message}\nRaw: ${text.substring(0, 200)}`);
+        throw new Error(`Script parse failed: ${parseErr.message}\nRaw: ${text.substring(0, 200)}`);
       }
     });
 
