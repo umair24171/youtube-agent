@@ -5,16 +5,16 @@ import fetch        from 'node-fetch';
 import fs           from 'fs';
 
 const VISUAL_QUERIES = {
-  default:    'abstract dark technology background',
-  trading:    'stock market charts finance dark',
-  code:       'abstract dark blue technology background',
-  ai:         'abstract neural network dark background',
-  mobile:     'abstract dark app technology',
-  saas:       'abstract dark dashboard technology',
-  automation: 'abstract dark technology circuit',
-  server:     'abstract data center dark background',
-  flutter:    'abstract dark mobile app development',
-  firebase:   'abstract dark cloud database technology',
+  default:    'luxury lifestyle cinematic dark',
+  money:      'money wealth dark aesthetic',
+  finance:    'city financial district night',
+  trading:    'person on phone trading stocks',
+  wealth:     'luxury car mansion wealth cinematic',
+  budget:     'person working laptop coffee money',
+  debt:       'credit card bills money stress dark',
+  invest:     'stock market graphs wealth dark',
+  savings:    'piggy bank coins saving money',
+  hustle:     'entrepreneur working night city lights',
 };
 
 // Font paths — bold variants first, TTF only (.ttc collections don't work with ffmpeg drawtext)
@@ -100,7 +100,7 @@ export class VideoAgent {
     let videos = data.videos || [];
     if (!videos.length) {
       const res2 = await fetch(
-        `https://api.pexels.com/videos/search?query=dark+technology+abstract&per_page=10`,
+        `https://api.pexels.com/videos/search?query=luxury+lifestyle+cinematic+dark&per_page=10`,
         { headers: { Authorization: apiKey } }
       );
       const data2 = await res2.json();
@@ -149,7 +149,7 @@ export class VideoAgent {
     // Supplement with generic fallback if not enough variety
     if (videos.length < count) {
       const res2 = await fetch(
-        `https://api.pexels.com/videos/search?query=dark+technology+abstract&per_page=15`,
+        `https://api.pexels.com/videos/search?query=luxury+lifestyle+cinematic+dark&per_page=15`,
         { headers: { Authorization: apiKey } }
       );
       const data2 = await res2.json();

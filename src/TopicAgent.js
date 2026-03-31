@@ -1,11 +1,28 @@
-// TopicAgent.js — Finds TRENDING AI/tech topics via Gemini knowledge
+// TopicAgent.js — Finds FINANCE BENDING topics via Gemini knowledge
+// Niche: Personal finance hacks bent for specific target audiences
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
 
 // ── Used-topics deduplication ─────────────────────────────────────────────────
 const USED_TOPICS_FILE = './data/used_topics.json';
-const MAX_USED_TOPICS  = 30;
+const MAX_USED_TOPICS  = 50;
+
+// Target audiences for the Finance Bending niche
+const TARGET_AUDIENCES = [
+  'Nurses',
+  'Teachers',
+  'Introverts',
+  'Freelancers',
+  'Single Moms',
+  'College Students',
+  'Remote Workers',
+  '9-to-5 Employees',
+  'Millennials in Debt',
+  'New Parents',
+  'Side Hustlers',
+  'Retail Workers',
+];
 
 function loadUsedTopics() {
   try {
@@ -50,42 +67,65 @@ export class TopicAgent {
   async getTopic(mode) {
     if (mode === 'recap') {
       return {
-        title: 'Weekly AI News Recap',
-        hook: 'Here is everything that happened in AI this week that actually matters.',
-        angle: 'Dev perspective on the week in AI',
-        context: 'Weekly recap of biggest AI and tech news',
+        title: 'Weekly Finance Hacks Recap',
+        hook: 'Here are the 5 money moves that actually worked this week — broken down for your life.',
+        angle: 'Finance bending — personal money tactics built for specific people',
+        context: 'Weekly recap of the best personal finance hacks, savings tactics, and money moves curated for real working people.',
+        targetAudience: 'General Audience',
         isRecap: true,
       };
     }
 
-    console.log('  🔍 Searching for trending AI topics...');
+    const usedTopics = loadUsedTopics();
+
+    // Pick a random target audience, avoiding back-to-back repeat of the same audience
+    let targetAudience;
+    let attempts = 0;
+    do {
+      targetAudience = TARGET_AUDIENCES[Math.floor(Math.random() * TARGET_AUDIENCES.length)];
+      attempts++;
+      const lastTopic = usedTopics.length > 0 ? usedTopics[0].toLowerCase() : '';
+      if (!lastTopic.includes(targetAudience.toLowerCase()) || attempts > 5) break;
+    } while (true);
+
+    console.log(`  🔍 Finding Finance Bending topic for: ${targetAudience}...`);
 
     const prompt = `Today is ${new Date().toDateString()}.
 
-Search your knowledge for the MOST trending and talked-about AI/tech topics RIGHT NOW in the last few days. Think about:
-- New model releases (Claude, GPT, Gemini, Llama, Mistral, etc.)
-- Big AI product launches or updates
-- Viral AI tools developers are using
-- Controversial AI news or drama
-- New coding tools, agents, or automation breakthroughs
-- AI startup funding, acquisitions, or shutdowns
-- Developer tools going viral on X/Twitter or HackerNews
+You are generating content for a YouTube channel called "Finance Bending" — personal finance advice SPECIFICALLY BENT for a target audience: ${targetAudience}.
 
-Pick the single HOTTEST topic that developers and indie hackers are actively discussing right now.
+The format is NOT generic finance advice. It takes a finance concept and shows exactly how it applies to ${targetAudience}'s specific lifestyle, schedule, income patterns, and challenges.
 
-Generate a ${mode === 'short' ? 'YouTube Short (45-55s)' : 'YouTube video (8-12 min)'} topic about it.
+GOOD examples:
+- "Nurses: How to Invest $200/Month on a 3-Day Shift Schedule"
+- "Why Introverts Are Actually Wired to Build Wealth Faster"
+- "The Side Hustle That Works for Teachers Without Burning Out"
+- "How Single Moms Pay Off Debt in 12 Months on One Salary"
+- "The 9-to-5 Worker's Secret to Hitting $100k Savings in 2 Years"
+
+Think about TRENDING finance topics RIGHT NOW:
+- High-yield savings accounts, CD rates
+- Debt payoff strategies (avalanche vs snowball)
+- Side hustle income optimization
+- Budgeting for irregular income
+- Tax optimization for workers
+- Emergency fund building
+- Investing basics (ETFs, index funds)
+- FIRE movement adapted for real constraints
+
+Pick the MOST compelling and specific topic for ${targetAudience} right now.
+Generate a ${mode === 'short' ? 'YouTube Short (45-55s)' : 'YouTube video (8-12 min)'} topic.
 
 Respond ONLY in valid JSON (no markdown, no explanation):
 {
-  "trendingEvent": "what exactly is trending (1 sentence)",
-  "title": "punchy topic title referencing the trend",
-  "hook": "first 3 second hook — shocking or provocative statement about the trend",
-  "angle": "developer/builder angle on why this matters",
-  "context": "3-4 sentences of background on the trending topic with specific facts",
+  "targetAudience": "${targetAudience}",
+  "trendingEvent": "the core finance concept being addressed (1 sentence)",
+  "title": "punchy, specific title that calls out the target audience",
+  "hook": "first 3 second hook — specific to ${targetAudience}'s pain point or win",
+  "angle": "the finance bending angle — how this is uniquely applicable to ${targetAudience}",
+  "context": "3-4 sentences of background on this finance topic with specific facts and numbers",
   "searchKeyword": "main keyword"
 }`;
-
-    const usedTopics = loadUsedTopics();
 
     try {
       const result = await withRetry(async () => {
@@ -113,23 +153,23 @@ Respond ONLY in valid JSON (no markdown, no explanation):
       if (usedTopics.length > MAX_USED_TOPICS) usedTopics.length = MAX_USED_TOPICS;
       saveUsedTopics(usedTopics);
 
-      console.log(`  🔥 Trending: ${result.trendingEvent}`);
+      console.log(`  🎯 Audience: ${result.targetAudience}`);
+      console.log(`  💡 Topic: ${result.title}`);
       return result;
     } catch (err) {
       console.warn('  ⚠️  TopicAgent fell back to seed idea:', err.message);
 
-      // Fallback seeds — all about AI trends, not about Umair
       const seeds = [
-        { title: 'Claude 4 Just Dropped — Is GPT-4 Dead?', hook: 'Anthropic just changed everything.', context: 'Claude 4 released with major capability jumps. Developers are switching from GPT-4 in droves.' },
-        { title: 'Every Developer Is Using This AI Tool Now', hook: 'This tool went from 0 to 1M users in 2 weeks.', context: 'A new AI coding tool is going viral across developer communities on X and HackerNews.' },
-        { title: 'OpenAI Just Released Something Huge', hook: 'OpenAI dropped a new model and nobody is talking about it enough.', context: 'OpenAI latest release is changing how developers build AI applications.' },
-        { title: 'Google Gemini vs Claude vs GPT — 2025 Real Comparison', hook: 'I tested all three for a week. Here is what actually matters.', context: 'Developers are trying to pick the best AI API for their apps. Real comparison with code.' },
-        { title: 'This AI Agent Framework Is Taking Over GitHub', hook: 'This repo got 50k stars in one week.', context: 'A new AI agent framework is going viral on GitHub with developers using it to build autonomous systems.' },
-        { title: 'Cursor AI Is Replacing Junior Devs — Here Is Proof', hook: 'I built a full app in 2 hours using only Cursor.', context: 'AI coding assistants are getting so good that entire apps are being built without writing code manually.' },
-        { title: 'The AI Startup That Just Raised $1B', hook: 'A startup nobody heard of just raised a billion dollars for AI.', context: 'Major AI funding rounds are happening weekly. Here is what it means for developers building in the space.' },
+        { targetAudience: 'Nurses', title: 'Nurses: Build a $10k Emergency Fund in 6 Months on 3-Day Shifts', hook: 'You work 3 days, have 4 off — here is how nurses use that gap to build wealth.', context: 'Nurses have unique scheduling that creates powerful windows for saving and side income. A 3-day on, 4-day off schedule means 208 free days per year. With the right system, nurses can build a $10k emergency fund in under 6 months.' },
+        { targetAudience: 'Teachers', title: 'Teachers: How to Retire 10 Years Early on a Teaching Salary', hook: 'Everyone says teachers cannot retire early. They are wrong.', context: 'Teachers have access to pension plans, summers off for side income, and strong job security — three assets most people overlook. With the right strategy, early retirement is more achievable for teachers than almost any other career.' },
+        { targetAudience: 'Introverts', title: 'Introverts Build Wealth Faster — Here Is the Data', hook: 'Introverts are quietly winning at personal finance and nobody is talking about it.', context: 'Studies show introverts spend less on social activities, impulse purchases, and lifestyle inflation. Their natural tendency to research before buying and avoid peer pressure spending creates a powerful wealth-building advantage.' },
+        { targetAudience: 'Freelancers', title: 'Freelancers: The Tax Strategy That Saves You $3k Every Year', hook: 'Every freelancer is overpaying taxes. Here is the fix.', context: 'Freelancers can legally deduct home office, equipment, software, health insurance, and retirement contributions. Most leave thousands on the table every year by not tracking these correctly.' },
+        { targetAudience: 'Single Moms', title: 'Single Moms: 5 Money Moves That Actually Work on One Income', hook: 'You are doing the work of two people on one paycheck. These moves change the math.', context: 'Single mothers face unique financial pressure with one income supporting a household. But specific strategies around tax credits, childcare deductions, and automated saving can dramatically change the financial trajectory even on a tight budget.' },
+        { targetAudience: '9-to-5 Employees', title: '9-to-5 Workers: Hit $100k Savings Without a Side Hustle', hook: 'You do not need a side hustle. You need a system.', context: 'Most 9-to-5 workers are told to hustle more to build wealth. But optimizing 401k matching, HYSA rates, and expense automation can compound faster than most side businesses — with zero extra hours.' },
+        { targetAudience: 'College Students', title: 'College Students: Start Investing With $50 and Crush Your Peers at 40', hook: 'The gap between starting at 20 vs 30 is worth $300,000. Not a typo.', context: 'Compound interest makes early investing wildly disproportionate. A college student investing $50/month starting at 20 will have significantly more at retirement than someone investing $500/month starting at 30.' },
       ];
-      const pick = seeds[new Date().getDay() % seeds.length];
-      return { ...pick, angle: 'Developer perspective', searchKeyword: 'AI news', trendingEvent: pick.hook };
+      const pick = seeds[Math.floor(Math.random() * seeds.length)];
+      return { ...pick, angle: 'Finance bending for real people', searchKeyword: 'personal finance', trendingEvent: pick.hook };
     }
   }
 }

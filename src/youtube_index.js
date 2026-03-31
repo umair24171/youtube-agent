@@ -23,7 +23,7 @@ async function runPipeline() {
   const notifier = new DiscordNotifier(process.env.DISCORD_WEBHOOK_YOUTUBE);
 
   console.log('╔══════════════════════════════════════╗');
-  console.log(`║  YouTube Pipeline  |  MODE: ${MODE.padEnd(9)}║`);
+  console.log(`║  Finance Bending Pipeline | ${MODE.padEnd(8)}║`);
   console.log(`║  DRY RUN: ${String(DRY_RUN).padEnd(27)}║`);
   console.log('╚══════════════════════════════════════╝');
 

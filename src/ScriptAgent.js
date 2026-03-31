@@ -1,47 +1,48 @@
-// ScriptAgent.js — Writes VIRAL scripts about TRENDING AI topics
+// ScriptAgent.js — Writes VIRAL finance bending scripts for specific target audiences
 import { GoogleGenAI } from '@google/genai';
 
 const CHANNEL_VOICE = `
-You are writing scripts for a YouTube Shorts channel covering AI/tech news from a developer's perspective.
+You are writing scripts for a YouTube channel called "Finance Bending" — personal finance advice SPECIFICALLY BENT for target audiences like Nurses, Teachers, Introverts, Freelancers, Single Moms, and others.
 
 CHANNEL STYLE:
-- Raw, fast, zero fluff — like a dev reacting to breaking news
+- Speaks directly to ONE specific group — their lifestyle, schedule, and challenges
 - No "Hey guys welcome back" — ever
-- Gets to the point in the first 2 seconds
-- Casual language: "bro", "nobody's talking about this", "this is insane"
-- Ends with a hot take or opinion, never a generic "like and subscribe"
+- Opens with the pain point or win specific to that audience
+- Casual but credible: "Here's the thing nobody tells nurses about investing..."
+- Uses real numbers, real scenarios, real tactics
+- Ends with a bold financial truth or call-to-action, never a generic "like and subscribe"
 `;
 
-// ── Hook formula bank (from proven viral patterns) ────────────────────────────
+// ── Hook formula bank (finance-specific viral patterns) ──────────────────────
 const HOOK_FORMULAS = `
 HOOK FORMULAS — pick the one that fits the topic best:
 
-CURIOSITY HOOKS (make them wonder what happens next):
-- "I was wrong about [belief] — and it cost me [consequence]."
-- "The real reason [X] is happening isn't what anyone is telling you."
-- "[Company] just did something and nobody noticed."
-- "This changes everything about [topic] — and it dropped yesterday."
+AUDIENCE-SPECIFIC HOOKS (call out the viewer directly):
+- "If you're a [audience], you're probably making this money mistake."
+- "Nobody tells [audience] about this — and it's costing you [amount]."
+- "[Audience] have one financial advantage most people ignore completely."
+- "Why [audience] are quietly building more wealth than almost anyone else."
 
-CONTRARIAN HOOKS (disagree with popular opinion):
-- "Unpopular opinion: [bold statement about the trend]"
-- "Everyone is wrong about [AI topic]. Here's the truth."
-- "Stop using [popular tool]. This is better and free."
-- "[Common belief] is dead. I have proof."
+CONTRARIAN HOOKS (flip the conventional wisdom):
+- "Unpopular opinion: [audience] are actually in a better financial position than they think."
+- "Everyone says [audience] can't [financial goal]. The data says otherwise."
+- "Stop [common bad advice]. Here's what actually works for [audience]."
+- "The [finance concept] advice online is wrong — especially if you're [audience]."
 
 STORY HOOKS (create immediate tension):
-- "Yesterday [X happened] and I haven't stopped thinking about it."
-- "I tested [new AI tool] for 48 hours. Here's what they don't show you."
-- "[Company] just [action] and developers are furious."
+- "I broke down the math for [audience] and the results were shocking."
+- "A [audience member] paid off $30k in 18 months. Here's the exact system."
+- "[Common scenario for audience]. Here's what to do instead."
 
-VALUE HOOKS (promise immediate payoff):
-- "How to [desirable outcome] using [new AI thing] — in under 5 minutes."
-- "[Number] things [new AI release] can do that GPT-4 still can't."
-- "This one [AI tool/feature] will save you [X hours] every week."
+VALUE HOOKS (promise immediate, specific payoff):
+- "How [audience] can save $[amount] this month without changing their lifestyle."
+- "[Number] money moves every [audience] should make before [timeframe]."
+- "The [finance tactic] that saved one [audience member] $[amount] in [timeframe]."
 
 SHOCK HOOKS (pure pattern interrupt):
-- "[Big company] just got destroyed by a [small thing] nobody saw coming."
-- "A [small team/solo dev] just [did something] that [big company] spent years on."
-- "[New AI] just passed [benchmark] that experts said was 5 years away."
+- "[Audience]'s [unique schedule/trait] is actually a wealth-building superpower."
+- "The reason [audience] stay broke isn't income — it's [specific overlooked reason]."
+- "[Audience] have access to [financial tool/benefit] most people don't even know exists."
 `;
 
 // Retry wrapper
@@ -69,13 +70,14 @@ export class ScriptAgent {
   async generate(topic, mode) {
     const isShort  = mode === 'short';
     const isRecap  = topic.isRecap === true;
+    const audience = topic.targetAudience || 'General Audience';
 
     const formatInstructions = isRecap
       ? `
-FORMAT: Weekly AI News Recap (3-5 min)
-- Hook: shocking one-liner about the biggest story of the week
-- Cover 3-5 biggest AI events with brief dev commentary on each
-- End with: one strong hot take on where AI is heading
+FORMAT: Weekly Finance Bending Recap (3-5 min)
+- Hook: one-liner about the biggest money move of the week
+- Cover 3-5 best finance hacks or tips from the week, each with a specific number or result
+- End with: one strong money truth the audience needs to hear
 `
       : isShort
       ? `
@@ -83,25 +85,26 @@ FORMAT: YouTube Short (35-45 seconds MAX)
 CRITICAL: voiceoverText MUST be under 65 words. Count them. No exceptions.
 
 STRUCTURE:
-- Line 1 (0-3s): HOOK — use one of the hook formulas. Make it impossible to scroll past.
-- Lines 2-4 (3-35s): What happened, why devs care, one key fact or number. Ruthlessly brief.
-- Last line: Hot take — strong opinion, no "like and subscribe"
+- Line 1 (0-3s): HOOK — call out the specific audience, use one of the hook formulas. Impossible to scroll past.
+- Lines 2-4 (3-35s): The finance tactic, why it works for this specific audience, one key number or result. Ruthlessly brief.
+- Last line: Bold financial truth — specific, opinionated, no "like and subscribe"
 
-TONE: Like a dev texting their friend about breaking news. Raw, fast, zero polish.
+TONE: Like a finance-savvy friend texting you a money tip. Direct, specific, zero fluff.
 `
       : `
 FORMAT: Long-form video (8-12 minutes)
-- Hook (0-30s): Shocking statement about the trend — with a specific number or fact
-- Context (30s-2min): What happened, who's involved, timeline
-- Dev implications (2-7min): What this means for developers building right now
-- Hot take (7-9min): Strong opinion — is this good or bad for the ecosystem?
-- CTA (last 30s): "Follow for AI news from a dev who actually ships"
+- Hook (0-30s): Call out the target audience + their specific pain point — with a real number
+- Context (30s-2min): The finance concept, why it matters, who it's helped
+- The Bend (2-7min): How this finance principle applies SPECIFICALLY to ${audience}'s life — schedule, income patterns, unique advantages
+- Real numbers (7-9min): Actual math showing what's possible — conservative, realistic projections
+- CTA (last 30s): "Follow for finance tactics built around YOUR life"
 `;
 
     const prompt = `${CHANNEL_VOICE}
 
-TRENDING TOPIC: ${topic.title}
-TRENDING EVENT: ${topic.trendingEvent || topic.context}
+TARGET AUDIENCE: ${audience}
+TOPIC: ${topic.title}
+FINANCE CONCEPT: ${topic.trendingEvent || topic.context}
 HOOK IDEA: ${topic.hook}
 CONTEXT: ${topic.context}
 ANGLE: ${topic.angle}
@@ -111,20 +114,20 @@ ${HOOK_FORMULAS}
 ${formatInstructions}
 
 RULES:
-1. The hook must stop someone mid-scroll. Use the formulas above — do not write a boring opener.
+1. Speak directly to ${audience} — use their specific context, not generic finance advice.
 2. Every sentence must earn its place. If it doesn't add info or tension, cut it.
 3. Never start with "In today's video", "Hey everyone", or any greeting.
-4. Use specific numbers and facts when possible — vague claims don't go viral.
-5. The topic is the trending event — not about the host's background.
+4. Use specific numbers and realistic scenarios — vague claims don't go viral.
+5. The content is about ${audience}'s money journey, not about the host.
 
 Respond ONLY in valid JSON (no markdown, no backticks):
 {
-  "title": "YouTube title — punchy, SEO, under 65 chars, includes main keyword",
+  "title": "YouTube title — calls out audience, punchy, SEO, under 65 chars",
   "voiceoverText": "complete script — natural speech, under 65 words for shorts",
-  "description": "YouTube description about the topic, max 400 chars, includes keywords",
-  "tags": ["ai","tag2","tag3","tag4","tag5","tag6","tag7","tag8"],
-  "linkedInCaption": "LinkedIn hot take on this trend — 3 punchy paragraphs, ends with [VIDEO_URL]",
-  "visualNotes": "2-3 words describing best visuals (e.g. robot screen dark, code terminal)"
+  "description": "YouTube description about the finance topic, max 400 chars, includes keywords",
+  "tags": ["personal finance","money","finance tips","wealth building","budgeting","saving money","financial freedom","money hacks"],
+  "linkedInCaption": "LinkedIn finance insight for ${audience} — 3 punchy paragraphs, ends with [VIDEO_URL]",
+  "visualNotes": "2-3 words describing best visuals (e.g. money wealth dark, luxury lifestyle finance)"
 }`;
 
     const script = await withRetry(async () => {
@@ -144,7 +147,7 @@ Respond ONLY in valid JSON (no markdown, no backticks):
         // Enforce word count for Shorts
         if (isShort) {
           const wordCount = parsed.voiceoverText.split(/\s+/).length;
-          if (wordCount > 80) {
+          if (wordCount > 65) {
             throw new Error(`Script too long: ${wordCount} words (max 65) — regenerating`);
           }
         }

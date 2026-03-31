@@ -1,6 +1,6 @@
 # .github/workflows/youtube_pipeline.yml
-# Fully automated YouTube pipeline — runs on schedule, zero manual work
-name: YouTube Automation Pipeline
+# Finance Bending — Fully automated YouTube pipeline — runs on schedule, zero manual work
+name: Finance Bending — YouTube Automation
 
 on:
   schedule:
@@ -40,7 +40,7 @@ on:
         default: ''
 
 jobs:
-  youtube-pipeline:
+  finance-bending-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -105,7 +105,7 @@ jobs:
           DISCORD_WEBHOOK_YOUTUBE:  ${{ secrets.DISCORD_WEBHOOK_YOUTUBE }}
           CHANNEL_HANDLE:           ${{ secrets.CHANNEL_HANDLE }}
         run: |
-          echo "🎬 Running pipeline: MODE=$MODE | DRY_RUN=$DRY_RUN"
+          echo "💰 Running Finance Bending pipeline: MODE=$MODE | DRY_RUN=$DRY_RUN"
           node src/youtube_index.js
 
       - name: Notify failure

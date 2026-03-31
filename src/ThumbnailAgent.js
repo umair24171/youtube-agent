@@ -90,22 +90,22 @@ export class ThumbnailAgent {
 
     // Badge
     const badgeFilter = drawtextAvailable
-      ? `drawtext=text='AI AUTOMATION':fontsize=22:fontcolor=white:borderw=1:bordercolor=black:x=1060:y=32:fontfile='${fontFile}'`
+      ? `drawtext=text='FINANCE HACKS':fontsize=22:fontcolor=white:borderw=1:bordercolor=black:x=1060:y=32:fontfile='${fontFile}'`
       : null;
 
     const allFilters = [
-      // Dark background gradient via color overlay
-      `drawbox=x=0:y=0:w=1280:h=720:color=#0a0a0f:t=fill`,
-      // Subtle grid lines
+      // Dark green-black background (finance aesthetic)
+      `drawbox=x=0:y=0:w=1280:h=720:color=#060f06:t=fill`,
+      // Subtle dark green grid lines
       ...Array.from({length: 12}, (_, i) =>
-        `drawbox=x=0:y=${(i+1)*60}:w=1280:h=1:color=#1a1a2e:t=fill`
+        `drawbox=x=0:y=${(i+1)*60}:w=1280:h=1:color=#0d1a0d:t=fill`
       ),
       // Gold left bar
       `drawbox=x=0:y=0:w=10:h=720:color=#FFD700:t=fill`,
       // Bottom branding bar
-      `drawbox=x=0:y=648:w=1280:h=72:color=#05050a:t=fill`,
-      // Orange badge background
-      `drawbox=x=1040:y=18:w=222:h=50:color=#FF6B35:t=fill`,
+      `drawbox=x=0:y=648:w=1280:h=72:color=#040a04:t=fill`,
+      // Dark gold badge background
+      `drawbox=x=1040:y=18:w=222:h=50:color=#B8860B:t=fill`,
       // Text layers
       titleFilters,
       hookFilter,
@@ -117,7 +117,7 @@ export class ThumbnailAgent {
     try {
       execFileSync('ffmpeg', [
         '-y', '-f', 'lavfi',
-        '-i', 'color=size=1280x720:rate=1:color=#0a0a0f',
+        '-i', 'color=size=1280x720:rate=1:color=#060f06',
         '-vframes', '1',
         '-vf', allFilters,
         outputPath,
@@ -125,10 +125,10 @@ export class ThumbnailAgent {
     } catch (err) {
       console.warn('  ⚠️  Thumbnail text failed, generating simple thumbnail');
       console.warn('  Full error:\n' + (err.stderr?.toString() || err.message).slice(-600));
-      const simpleFilters = 'drawbox=x=0:y=0:w=10:h=720:color=#FFD700:t=fill,drawbox=x=0:y=648:w=1280:h=72:color=#05050a:t=fill,drawbox=x=1040:y=18:w=222:h=50:color=#FF6B35:t=fill';
+      const simpleFilters = 'drawbox=x=0:y=0:w=10:h=720:color=#FFD700:t=fill,drawbox=x=0:y=648:w=1280:h=72:color=#040a04:t=fill,drawbox=x=1040:y=18:w=222:h=50:color=#B8860B:t=fill';
       execFileSync('ffmpeg', [
         '-y', '-f', 'lavfi',
-        '-i', 'color=size=1280x720:rate=1:color=#0a0a0f',
+        '-i', 'color=size=1280x720:rate=1:color=#060f06',
         '-vframes', '1',
         '-vf', simpleFilters,
         outputPath,
