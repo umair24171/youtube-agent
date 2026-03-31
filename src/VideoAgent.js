@@ -4,6 +4,24 @@ import { execSync, execFileSync } from 'child_process';
 import fetch        from 'node-fetch';
 import fs           from 'fs';
 
+// Audience-specific Pexels queries — checked before VISUAL_QUERIES keyword matching
+const AUDIENCE_QUERIES = [
+  { match: ['nurse', 'nurses'],                  query: 'nurse hospital scrubs working' },
+  { match: ['freelancer', 'freelancers'],         query: 'freelancer laptop coffee shop home office' },
+  { match: ['teacher', 'teachers'],              query: 'teacher classroom education' },
+  { match: ['9-to-5', 'employee', 'employees'],  query: 'office worker commute city' },
+  { match: ['college student', 'college students'], query: 'student studying campus laptop' },
+];
+
+function resolveAudienceQuery(targetAudience) {
+  if (!targetAudience) return null;
+  const lower = targetAudience.toLowerCase();
+  for (const { match, query } of AUDIENCE_QUERIES) {
+    if (match.some(m => lower.includes(m))) return query;
+  }
+  return null;
+}
+
 const VISUAL_QUERIES = {
   default:    'luxury lifestyle cinematic dark',
   money:      'money wealth dark aesthetic',
@@ -76,14 +94,17 @@ export class VideoAgent {
   // Background fetching
   // ─────────────────────────────────────────────────────────────
 
-  async fetchBackground(visualNotes = '') {
+  async fetchBackground(visualNotes = '', targetAudience = '') {
     const apiKey = process.env.PEXELS_API_KEY;
     if (!apiKey) throw new Error('PEXELS_API_KEY not set');
 
-    let query = VISUAL_QUERIES.default;
-    const notes = visualNotes.toLowerCase();
-    for (const [key, q] of Object.entries(VISUAL_QUERIES)) {
-      if (notes.includes(key)) { query = q; break; }
+    let query = resolveAudienceQuery(targetAudience);
+    if (!query) {
+      query = VISUAL_QUERIES.default;
+      const notes = visualNotes.toLowerCase();
+      for (const [key, q] of Object.entries(VISUAL_QUERIES)) {
+        if (notes.includes(key)) { query = q; break; }
+      }
     }
 
     console.log(`  🎥 Fetching background: "${query}"`);
@@ -125,14 +146,17 @@ export class VideoAgent {
   }
 
   // Fetch count distinct Pexels clips in parallel — used for Shorts B-roll
-  async fetchMultipleBackgrounds(visualNotes = '', count = 4) {
+  async fetchMultipleBackgrounds(visualNotes = '', count = 4, targetAudience = '') {
     const apiKey = process.env.PEXELS_API_KEY;
     if (!apiKey) throw new Error('PEXELS_API_KEY not set');
 
-    let query = VISUAL_QUERIES.default;
-    const notes = visualNotes.toLowerCase();
-    for (const [key, q] of Object.entries(VISUAL_QUERIES)) {
-      if (notes.includes(key)) { query = q; break; }
+    let query = resolveAudienceQuery(targetAudience);
+    if (!query) {
+      query = VISUAL_QUERIES.default;
+      const notes = visualNotes.toLowerCase();
+      for (const [key, q] of Object.entries(VISUAL_QUERIES)) {
+        if (notes.includes(key)) { query = q; break; }
+      }
     }
 
     console.log(`  🎥 Fetching ${count} B-roll clips: "${query}"`);
@@ -383,7 +407,7 @@ export class VideoAgent {
   // Main assembly — signature unchanged: assemble(audioPath, script, mode)
   // ─────────────────────────────────────────────────────────────
 
-  async assemble(audioPath, script, mode) {
+  async assemble(audioPath, script, mode, targetAudience = '') {
     const isShort     = mode === 'short';
     const rawDuration = this.getAudioDuration(audioPath);
     const duration    = (isShort && rawDuration > 58) ? 58 : rawDuration;
@@ -411,10 +435,10 @@ export class VideoAgent {
 
       let bgVideos;
       try {
-        bgVideos = await this.fetchMultipleBackgrounds(script.visualNotes || '', CLIP_COUNT);
+        bgVideos = await this.fetchMultipleBackgrounds(script.visualNotes || '', CLIP_COUNT, targetAudience);
       } catch (err) {
         console.warn('  ⚠️  Multi-clip fetch failed, falling back to single clip:', err.message);
-        bgVideos = [await this.fetchBackground(script.visualNotes || '')];
+        bgVideos = [await this.fetchBackground(script.visualNotes || '', targetAudience)];
       }
 
       const wordCaps       = this.buildWordCaptions(script.voiceoverText || script.title, duration);
@@ -536,7 +560,7 @@ export class VideoAgent {
     // LONGFORM PIPELINE — unchanged from original
     // ══════════════════════════════════════════════════════════
     } else {
-      const bgVideo = await this.fetchBackground(script.visualNotes || '');
+      const bgVideo = await this.fetchBackground(script.visualNotes || '', targetAudience);
 
       // Base video filter — scale to 16:9 for long-form
       const baseVf      = `scale=1920:1080,setsar=1`;

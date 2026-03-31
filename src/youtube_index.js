@@ -52,7 +52,7 @@ async function runPipeline() {
     // ── STEP 4: Assemble Video ──────────────────────────────────────
     console.log('\n[4/7] Assembling video...');
     const videoAgent = new VideoAgent();
-    const videoPath = await videoAgent.assemble(audioPath, script, MODE);
+    const videoPath = await videoAgent.assemble(audioPath, script, MODE, topic.targetAudience);
     console.log(`  ✅ Video: ${videoPath}`);
 
     // ── STEP 5: Thumbnail ───────────────────────────────────────────

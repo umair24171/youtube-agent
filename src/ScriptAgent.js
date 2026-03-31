@@ -82,7 +82,7 @@ FORMAT: Weekly Finance Bending Recap (3-5 min)
       : isShort
       ? `
 FORMAT: YouTube Short (35-45 seconds MAX)
-CRITICAL: voiceoverText MUST be under 65 words. Count them. No exceptions.
+CRITICAL: voiceoverText MUST be under 55 words. Count them. No exceptions.
 
 STRUCTURE:
 - Line 1 (0-3s): HOOK — call out the specific audience, use one of the hook formulas. Impossible to scroll past.
@@ -147,8 +147,8 @@ Respond ONLY in valid JSON (no markdown, no backticks):
         // Enforce word count for Shorts
         if (isShort) {
           const wordCount = parsed.voiceoverText.split(/\s+/).length;
-          if (wordCount > 65) {
-            throw new Error(`Script too long: ${wordCount} words (max 65) — regenerating`);
+          if (wordCount > 55) {
+            throw new Error(`Script too long: ${wordCount} words (max 55) — regenerating`);
           }
         }
 
