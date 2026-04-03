@@ -1,4 +1,5 @@
 // ScriptAgent.js — Writes VIRAL finance bending scripts for specific target audiences
+// v2 — Retention-optimized: fixes 11s drop-off, targets 70%+ APV for Shorts push
 import { GoogleGenAI } from '@google/genai';
 
 const CHANNEL_VOICE = `
@@ -45,6 +46,55 @@ SHOCK HOOKS (pure pattern interrupt):
 - "[Audience] have access to [financial tool/benefit] most people don't even know exists."
 `;
 
+// ── Retention rules — fixes the 11s drop-off ────────────────────────────────
+const RETENTION_RULES = `
+RETENTION RULES — these are NON-NEGOTIABLE for Shorts (target APV: 70%+):
+
+THE 11-SECOND DROP-OFF PROBLEM:
+Analytics show viewers are staying for the hook (0–3s) but swiping away around second 10–11.
+This means the middle of the script feels slow, generic, or wordy. Fix it like this:
+
+RULE 1 — STACCATO MIDDLE SENTENCES:
+The "meat" (seconds 3–30) must be punchy, single-idea sentences. No compound sentences.
+❌ BAD:  "As a freelancer, you can deduct your home office expenses and your education costs."
+✅ GOOD: "Write off your WiFi. Write off your laptop. Write off your coffee shop tab."
+
+Every sentence in the middle must be 5 words or fewer OR a standalone money fact.
+Think: text message, not paragraph. Punch, pause, punch.
+
+RULE 2 — VISUAL CUE MARKERS:
+Every 3 seconds of voiceover needs a [VISUAL CUE] tag. These tell the editor/publisher
+exactly when to cut or change the background so the viewer's brain resets at second 10.
+
+Format: [VISUAL CUE: describe the exact visual change in 3 words]
+
+Examples:
+- [VISUAL CUE: new background color]
+- [VISUAL CUE: zoom in text]
+- [VISUAL CUE: dollar amount slams in]
+- [VISUAL CUE: emoji explosion]
+- [VISUAL CUE: cut to new angle]
+
+Place a [VISUAL CUE] tag after every 2–3 lines of voiceover.
+
+RULE 3 — THE SECOND-10 RESET:
+Around the 10-second mark, you MUST have one of these pattern interrupts:
+- A shocking number slammed in with no setup ("$4,200. Gone. Every year.")
+- A direct question to the viewer ("Are you doing this?")
+- A bold single-word or two-word statement ("Stop. Listen.")
+- A complete tone shift (go from calm to urgent, or vice versa)
+
+RULE 4 — NO FILLER ANYWHERE:
+Cut every word that doesn't add a number, a name, or a tension. Ruthless.
+❌ "And that's actually really important because..."
+✅ [delete it entirely]
+
+RULE 5 — END WITH A TRUTH, NOT A REQUEST:
+The last line must be a bold, opinionated money statement specific to the audience.
+❌ "Follow for more tips!"
+✅ "Most [audience] will ignore this. The ones who don't? They retire early."
+`;
+
 // Retry wrapper
 async function withRetry(fn, retries = 3, delayMs = 5000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -85,19 +135,46 @@ FORMAT: YouTube Short (35-45 seconds MAX)
 CRITICAL: voiceoverText MUST be under 55 words. Count them. No exceptions.
 
 STRUCTURE:
-- Line 1 (0-3s): HOOK — call out the specific audience, use one of the hook formulas. Impossible to scroll past.
-- Lines 2-4 (3-35s): The finance tactic, why it works for this specific audience, one key number or result. Ruthlessly brief.
-- Last line: Bold financial truth — specific, opinionated, no "like and subscribe"
+- Line 1 (0-3s): HOOK — call out the specific audience, use one of the hook formulas.
+  Impossible to scroll past. Must end with a specific number or shocking claim.
 
-TONE: Like a finance-savvy friend texting you a money tip. Direct, specific, zero fluff.
+- [VISUAL CUE: opening background]
+
+- Lines 2-3 (3-10s): First finance fact — SHORT sentences, 5 words max each.
+  One idea per line. No conjunctions connecting two facts.
+
+- [VISUAL CUE: zoom or color shift]  ← THIS IS THE SECOND-10 RESET. REQUIRED.
+
+- THE SECOND-10 RESET (exactly at second 10): One of these pattern interrupts:
+  → Shocking number with no setup: "$4,200. Gone. Every year."
+  → Direct question: "Are you doing this?"
+  → Bold statement: "Stop. Listen."
+
+- [VISUAL CUE: dollar amount or key stat slams in]
+
+- Lines 4-6 (10-35s): The tactic broken into staccato sentences.
+  Each line = one action or one number. No filler. No transitions.
+
+- [VISUAL CUE: final visual before outro]
+
+- Last line (35-45s): Bold financial truth specific to this audience.
+  NOT a request. NOT "like and subscribe." A statement they'll screenshot.
+
+TONE: Like a finance-savvy friend sending you a voice memo. Direct. Punchy. Zero fluff.
+
+REMEMBER THE RETENTION RULES — apply all 5 without exception.
 `
       : `
 FORMAT: Long-form video (8-12 minutes)
 - Hook (0-30s): Call out the target audience + their specific pain point — with a real number
 - Context (30s-2min): The finance concept, why it matters, who it's helped
-- The Bend (2-7min): How this finance principle applies SPECIFICALLY to ${audience}'s life — schedule, income patterns, unique advantages
+- The Bend (2-7min): How this finance principle applies SPECIFICALLY to ${audience}'s life
+  Use staccato sentences throughout the middle — same rule as Shorts, just more of them.
+  Insert [VISUAL CUE] tags every 30 seconds to guide editing.
 - Real numbers (7-9min): Actual math showing what's possible — conservative, realistic projections
 - CTA (last 30s): "Follow for finance tactics built around YOUR life"
+
+Apply the RETENTION RULES to every section, especially The Bend.
 `;
 
     const prompt = `${CHANNEL_VOICE}
@@ -111,19 +188,25 @@ ANGLE: ${topic.angle}
 
 ${HOOK_FORMULAS}
 
+${RETENTION_RULES}
+
 ${formatInstructions}
 
-RULES:
+FINAL RULES:
 1. Speak directly to ${audience} — use their specific context, not generic finance advice.
 2. Every sentence must earn its place. If it doesn't add info or tension, cut it.
 3. Never start with "In today's video", "Hey everyone", or any greeting.
 4. Use specific numbers and realistic scenarios — vague claims don't go viral.
 5. The content is about ${audience}'s money journey, not about the host.
+6. Include ALL [VISUAL CUE] tags in the voiceoverText — they are part of the output.
+7. The second-10 pattern interrupt is MANDATORY in every Short.
 
 Respond ONLY in valid JSON (no markdown, no backticks):
 {
   "title": "YouTube title — calls out audience, punchy, SEO, under 65 chars",
-  "voiceoverText": "complete script — natural speech, under 65 words for shorts",
+  "voiceoverText": "complete script with [VISUAL CUE] tags inline — under 55 words of actual speech for Shorts",
+  "wordCount": "exact word count of voiceoverText excluding [VISUAL CUE] tags",
+  "retentionNotes": "1-sentence summary of where the second-10 reset appears and what pattern interrupt was used",
   "description": "YouTube description about the finance topic, max 400 chars, includes keywords",
   "tags": ["personal finance","money","finance tips","wealth building","budgeting","saving money","financial freedom","money hacks"],
   "linkedInCaption": "LinkedIn finance insight for ${audience} — 3 punchy paragraphs, ends with [VIDEO_URL]",
@@ -144,15 +227,25 @@ Respond ONLY in valid JSON (no markdown, no backticks):
           throw new Error('Missing required fields in script response');
         }
 
-        // Enforce word count for Shorts
+        // Enforce word count for Shorts — exclude [VISUAL CUE] tags from count
         if (isShort) {
-          const wordCount = parsed.voiceoverText.split(/\s+/).length;
+          const cleanText = parsed.voiceoverText.replace(/\[VISUAL CUE:[^\]]*\]/g, '').trim();
+          const wordCount = cleanText.split(/\s+/).length;
           if (wordCount > 55) {
             throw new Error(`Script too long: ${wordCount} words (max 55) — regenerating`);
           }
+          // Warn if no visual cues present
+          const cueTags = (parsed.voiceoverText.match(/\[VISUAL CUE:/g) || []).length;
+          if (cueTags < 3) {
+            throw new Error(`Not enough [VISUAL CUE] tags: found ${cueTags}, need at least 3 — regenerating`);
+          }
+          // Warn if no second-10 reset detected
+          if (!parsed.retentionNotes || parsed.retentionNotes.length < 20) {
+            throw new Error('Missing retentionNotes — second-10 reset not confirmed — regenerating');
+          }
         }
 
-        return parsed;
+        return { ...parsed, wordCount: parsed.wordCount || 'N/A' };
       } catch (parseErr) {
         throw new Error(`Script parse failed: ${parseErr.message}\nRaw: ${text.substring(0, 200)}`);
       }

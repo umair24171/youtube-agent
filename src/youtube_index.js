@@ -41,18 +41,28 @@ async function runPipeline() {
     const scriptAgent = new ScriptAgent();
     const script = await scriptAgent.generate(topic, MODE);
     console.log(`  ✅ Title: ${script.title}`);
-    console.log(`  ✅ Script length: ${script.voiceoverText.length} chars`);
+    console.log(`  ✅ Word count (excl. cues): ${script.wordCount}`);
+    console.log(`  ✅ Retention note: ${script.retentionNotes}`);
 
     // ── STEP 3: Voiceover ───────────────────────────────────────────
     console.log('\n[3/7] Generating voiceover...');
     const voiceAgent = new VoiceAgent();
-    const audioPath = await voiceAgent.generate(script.voiceoverText);
+    // VoiceAgent v2 returns { audioPath, ttsText, visualCues }
+    const { audioPath, ttsText, visualCues } = await voiceAgent.generate(script.voiceoverText);
     console.log(`  ✅ Audio: ${audioPath}`);
+    console.log(`  ✅ Visual cues: ${visualCues.length} triggers queued`);
 
     // ── STEP 4: Assemble Video ──────────────────────────────────────
     console.log('\n[4/7] Assembling video...');
     const videoAgent = new VideoAgent();
-    const videoPath = await videoAgent.assemble(audioPath, script, MODE, topic.targetAudience);
+    const videoPath = await videoAgent.assemble(
+      audioPath,
+      script,
+      MODE,
+      topic.targetAudience,
+      // New: pass visual cue timing + clean spoken text to VideoAgent
+      { visualCues, ttsText }
+    );
     console.log(`  ✅ Video: ${videoPath}`);
 
     // ── STEP 5: Thumbnail ───────────────────────────────────────────
@@ -85,9 +95,7 @@ async function runPipeline() {
       console.log('\n[6.5/7] Posting to Instagram...');
       const igAgent = new InstagramAgent();
       const igUrl = await igAgent.post(videoPath, script);
-      if (igUrl) {
-        console.log(`  ✅ Instagram Reel live: ${igUrl}`);
-      }
+      if (igUrl) console.log(`  ✅ Instagram Reel live: ${igUrl}`);
     } else {
       console.log('\n[6.5/7] SKIPPED (dry run)');
     }
@@ -102,7 +110,7 @@ async function runPipeline() {
       console.log('\n[7/7] SKIPPED (dry run)');
     }
 
-    // ── CLEANUP: remove temp files now that all cross-posting is done ─
+    // ── CLEANUP: remove temp files once all cross-posting is done ───
     for (const p of [videoPath, thumbnailPath, audioPath]) {
       try { fs.unlinkSync(p); } catch {}
     }
@@ -112,7 +120,7 @@ async function runPipeline() {
       `✅ **Video Published!**\n` +
       `📹 ${script.title}\n` +
       `🔗 ${videoUrl}\n` +
-      `📊 Mode: \`${MODE}\``
+      `📊 Mode: \`${MODE}\` | Cues: ${visualCues.length} visual triggers`
     );
 
     console.log('\n✅ Pipeline complete!\n');
