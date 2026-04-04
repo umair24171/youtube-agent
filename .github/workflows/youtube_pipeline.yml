@@ -4,15 +4,15 @@ name: Finance Bending — YouTube Automation
 
 on:
   schedule:
-    # All times in UTC (PKT = UTC+5, so 9AM PKT = 4AM UTC)
-    # Shorts — Mon, Wed, Fri at 9AM PKT
-    - cron: '0 4 * * 1'   # Monday Short
-    - cron: '0 4 * * 3'   # Wednesday Short
-    - cron: '0 4 * * 5'   # Friday Short
-    # Long-form Tutorial — Tuesday at 4AM UTC
-    - cron: '0 4 * * 2'
-    # Weekly Recap — Sunday at 4AM UTC
-    - cron: '0 4 * * 0'
+    # All times in UTC (PKT = UTC+5, so 11AM PKT = 6AM UTC)
+    # Shorts — Mon, Wed, Fri at 11AM PKT
+    - cron: '0 6 * * 1'   # Monday Short
+    - cron: '0 6 * * 3'   # Wednesday Short
+    - cron: '0 6 * * 5'   # Friday Short
+    # Long-form Tutorial — Tuesday at 11AM PKT (6AM UTC)
+    - cron: '0 6 * * 2'
+    # Weekly Recap — Sunday at 11AM PKT (6AM UTC)
+    - cron: '0 6 * * 0'
 
   # Manual trigger with mode selection (for testing)
   workflow_dispatch:

@@ -48,7 +48,7 @@ async function runPipeline() {
     console.log('\n[3/7] Generating voiceover...');
     const voiceAgent = new VoiceAgent();
     // VoiceAgent v2 returns { audioPath, ttsText, visualCues }
-    const { audioPath, ttsText, visualCues } = await voiceAgent.generate(script.voiceoverText);
+    const { audioPath, ttsText, visualCues, wordTimestamps } = await voiceAgent.generate(script.voiceoverText);
     console.log(`  ✅ Audio: ${audioPath}`);
     console.log(`  ✅ Visual cues: ${visualCues.length} triggers queued`);
 
@@ -61,7 +61,7 @@ async function runPipeline() {
       MODE,
       topic.targetAudience,
       // New: pass visual cue timing + clean spoken text to VideoAgent
-      { visualCues, ttsText }
+      { visualCues, ttsText, wordTimestamps }
     );
     console.log(`  ✅ Video: ${videoPath}`);
 

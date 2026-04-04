@@ -55,16 +55,35 @@ export class VoiceAgent {
     console.log(`  🎬  Visual cues extracted: ${visualCues.length}`);
     visualCues.forEach((v, i) => console.log(`       ${i + 1}. [~word ${v.wordIndex}] ${v.cue}`));
 
-    const audio = await this.client.textToSpeech.convert(this.voiceId, {
-      text: ttsText,                      // ← clean text only, no brackets
-      modelId: 'eleven_multilingual_v2',
-      outputFormat: 'mp3_44100_128',
-    });
-
     const outputPath = `/tmp/voiceover_${Date.now()}.mp3`;
-    const chunks = [];
-    for await (const chunk of audio) chunks.push(chunk);
-    fs.writeFileSync(outputPath, Buffer.concat(chunks));
+    let wordTimestamps = null;
+
+    try {
+      // Use timestamps endpoint — returns audio + exact per-character timing for caption sync
+      const result = await this.client.textToSpeech.convertWithTimestamps(this.voiceId, {
+        text: ttsText,
+        modelId: 'eleven_multilingual_v2',
+        outputFormat: 'mp3_44100_128',
+      });
+
+      fs.writeFileSync(outputPath, Buffer.from(result.audioBase64, 'base64'));
+
+      if (result.alignment) {
+        wordTimestamps = this._buildWordTimestamps(result.alignment);
+        console.log(`  ⏱️  Word timestamps: ${wordTimestamps.length} words synced`);
+      }
+    } catch (err) {
+      // Fallback: stream without timestamps (captions use uniform timing)
+      console.warn(`  ⚠️  Timestamps API failed (${err.message.slice(0, 60)}), falling back to stream`);
+      const audio = await this.client.textToSpeech.convert(this.voiceId, {
+        text: ttsText,
+        modelId: 'eleven_multilingual_v2',
+        outputFormat: 'mp3_44100_128',
+      });
+      const chunks = [];
+      for await (const chunk of audio) chunks.push(chunk);
+      fs.writeFileSync(outputPath, Buffer.concat(chunks));
+    }
 
     console.log(`  ✅  Audio saved: ${outputPath}`);
 
@@ -72,6 +91,47 @@ export class VoiceAgent {
       audioPath: outputPath,
       ttsText,          // clean spoken text
       visualCues,       // [{ cue, wordIndex }] — for VideoAgent timing
+      wordTimestamps,   // [{ text, start, end }] in seconds — null if unavailable
     };
+  }
+
+  /**
+   * Converts ElevenLabs character-level alignment into word-level timestamps.
+   * @param {object} alignment - { characters, characterStartTimesSeconds, characterEndTimesSeconds }
+   * @returns {Array<{ text: string, start: number, end: number }>}
+   */
+  _buildWordTimestamps(alignment) {
+    const { characters, characterStartTimesSeconds, characterEndTimesSeconds } = alignment;
+
+    const words = [];
+    let wordText = '';
+    let wordStart = null;
+    let wordEnd   = null;
+
+    for (let i = 0; i < characters.length; i++) {
+      const ch = characters[i];
+      if (ch === ' ' || ch === '\n' || ch === '\t') {
+        if (wordText.trim()) {
+          words.push({ raw: wordText.trim(), start: wordStart, end: wordEnd });
+          wordText = '';
+          wordStart = null;
+        }
+      } else {
+        if (wordStart === null) wordStart = characterStartTimesSeconds[i];
+        wordEnd   = characterEndTimesSeconds[i];
+        wordText += ch;
+      }
+    }
+    if (wordText.trim()) {
+      words.push({ raw: wordText.trim(), start: wordStart, end: wordEnd });
+    }
+
+    return words
+      .map(w => ({
+        text: w.raw.toUpperCase().replace(/'/g, '').replace(/[^A-Z0-9.,!?]/g, '').trim(),
+        start: w.start,
+        end:   w.end,
+      }))
+      .filter(w => w.text);
   }
 }

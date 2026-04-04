@@ -407,7 +407,7 @@ export class VideoAgent {
   // Main assembly — signature unchanged: assemble(audioPath, script, mode)
   // ─────────────────────────────────────────────────────────────
 
-  async assemble(audioPath, script, mode, targetAudience = '') {
+  async assemble(audioPath, script, mode, targetAudience = '', opts = {}) {
     const isShort     = mode === 'short';
     const rawDuration = this.getAudioDuration(audioPath);
     const duration    = (isShort && rawDuration > 58) ? 58 : rawDuration;
@@ -441,7 +441,10 @@ export class VideoAgent {
         bgVideos = [await this.fetchBackground(script.visualNotes || '', targetAudience)];
       }
 
-      const wordCaps       = this.buildWordCaptions(script.voiceoverText || script.title, duration);
+      const { wordTimestamps } = opts;
+      const wordCaps = (wordTimestamps && wordTimestamps.length)
+        ? wordTimestamps
+        : this.buildWordCaptions(script.voiceoverText || script.title, duration);
       const wordCapFilters = drawtextAvailable ? this.buildWordCaptionFilters(wordCaps, fontFile) : [];
 
       // BuildZn watermark: bottom-right, semi-transparent
