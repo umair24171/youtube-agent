@@ -78,25 +78,71 @@ export class InstagramAgent {
   }
 
   // ── Upload local video to a temporary public CDN (needed by Graph API) ─────
-  // Uses 0x0.st — no API key needed, files auto-expire after a few days
+  // Tries three CDNs in order; throws only if all fail.
   async _uploadToTempCDN(videoPath) {
-    const form = new FormData();
-    form.append('file', fs.createReadStream(videoPath), {
-      filename:    'reel.mp4',
-      contentType: 'video/mp4',
-    });
+    const fileName = 'reel.mp4';
 
-    const res = await fetch('https://0x0.st', {
-      method:  'POST',
-      body:    form,
-      headers: form.getHeaders(),
-      timeout: 60000,
-    });
+    const cdns = [
+      {
+        name: 'tmpfiles.org',
+        upload: async () => {
+          const form = new FormData();
+          form.append('file', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
+          const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST', body: form, headers: form.getHeaders(), timeout: 60000,
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (json.status !== 'success' || !json.data?.url) throw new Error(`Unexpected response: ${JSON.stringify(json)}`);
+          // Transform page URL → direct download URL (/tmpfiles.org/ → /tmpfiles.org/dl/)
+          return json.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+        },
+      },
+      {
+        name: 'file.io',
+        upload: async () => {
+          const form = new FormData();
+          form.append('file', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
+          const res = await fetch('https://file.io?expires=1d', {
+            method: 'POST', body: form, headers: form.getHeaders(), timeout: 60000,
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (!json.success || !json.link) throw new Error(`Unexpected response: ${JSON.stringify(json)}`);
+          return json.link;
+        },
+      },
+      {
+        name: 'litterbox.catbox.moe',
+        upload: async () => {
+          const form = new FormData();
+          form.append('reqtype', 'fileupload');
+          form.append('fileToUpload', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
+          const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+            method: 'POST', body: form, headers: form.getHeaders(), timeout: 60000,
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const url = (await res.text()).trim();
+          if (!url.startsWith('http')) throw new Error(`Invalid URL: ${url}`);
+          return url;
+        },
+      },
+    ];
 
-    if (!res.ok) throw new Error(`CDN upload failed: ${res.status} ${res.statusText}`);
-    const url = (await res.text()).trim();
-    if (!url.startsWith('http')) throw new Error(`CDN returned invalid URL: ${url}`);
-    return url;
+    const errors = [];
+    for (const cdn of cdns) {
+      try {
+        console.log(`  📤 Uploading to ${cdn.name}...`);
+        const url = await cdn.upload();
+        console.log(`  🔗 CDN URL ready (${cdn.name})`);
+        return url;
+      } catch (err) {
+        console.warn(`  ⚠️  ${cdn.name} failed: ${err.message}`);
+        errors.push(`${cdn.name}: ${err.message}`);
+      }
+    }
+
+    throw new Error(`All CDN uploads failed:\n  ${errors.join('\n  ')}`);
   }
 
   // ── Official Graph API posting ──────────────────────────────────────────────
