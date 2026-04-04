@@ -83,7 +83,7 @@ export class ThumbnailAgent {
       : null;
 
     // Channel name
-    const channelName = (process.env.CHANNEL_HANDLE || '@DevUmair').replace('@', '').toUpperCase();
+    const channelName = (process.env.CHANNEL_HANDLE || '@BuildZn').replace('@', '').toUpperCase();
     const nameFilter = drawtextAvailable
       ? `drawtext=text='${channelName}':fontsize=30:fontcolor=#FFD700:borderw=2:bordercolor=black:x=40:y=672:fontfile='${fontFile}'`
       : null;

@@ -412,7 +412,7 @@ export class VideoAgent {
     const rawDuration = this.getAudioDuration(audioPath);
     const duration    = (isShort && rawDuration > 58) ? 58 : rawDuration;
     const output      = `/tmp/final_${Date.now()}.mp4`;
-    const channelName = process.env.CHANNEL_HANDLE || '@DevUmair';
+    const channelName = process.env.CHANNEL_HANDLE || '@BuildZn';
 
     console.log(`  🎬 Assembling ${isShort ? 'Short (9:16)' : 'Long-form (16:9)'} | Duration: ${duration.toFixed(1)}s`);
 
