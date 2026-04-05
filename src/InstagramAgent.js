@@ -84,18 +84,19 @@ export class InstagramAgent {
 
     const cdns = [
       {
-        name: 'tmpfiles.org',
+        name: 'litterbox.catbox.moe',
         upload: async () => {
           const form = new FormData();
-          form.append('file', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
-          const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+          form.append('reqtype', 'fileupload');
+          form.append('time', '72h');
+          form.append('fileToUpload', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
+          const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
             method: 'POST', body: form, headers: form.getHeaders(), timeout: 60000,
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const json = await res.json();
-          if (json.status !== 'success' || !json.data?.url) throw new Error(`Unexpected response: ${JSON.stringify(json)}`);
-          // Transform page URL → direct download URL (/tmpfiles.org/ → /tmpfiles.org/dl/)
-          return json.data.url.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+          const url = (await res.text()).trim();
+          if (!url.startsWith('http')) throw new Error(`Invalid URL: ${url}`);
+          return url;
         },
       },
       {
@@ -110,21 +111,6 @@ export class InstagramAgent {
           const json = await res.json();
           if (!json.success || !json.link) throw new Error(`Unexpected response: ${JSON.stringify(json)}`);
           return json.link;
-        },
-      },
-      {
-        name: 'litterbox.catbox.moe',
-        upload: async () => {
-          const form = new FormData();
-          form.append('reqtype', 'fileupload');
-          form.append('fileToUpload', fs.createReadStream(videoPath), { filename: fileName, contentType: 'video/mp4' });
-          const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-            method: 'POST', body: form, headers: form.getHeaders(), timeout: 60000,
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const url = (await res.text()).trim();
-          if (!url.startsWith('http')) throw new Error(`Invalid URL: ${url}`);
-          return url;
         },
       },
     ];
