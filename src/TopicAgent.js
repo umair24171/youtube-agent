@@ -1,14 +1,18 @@
 // TopicAgent.js — Finds FINANCE BENDING topics via Gemini knowledge
 // Niche: Personal finance hacks bent for specific target audiences
+// v3 — Weighted audience selection based on performance data
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
 
 // ── Used-topics deduplication ─────────────────────────────────────────────────
-const USED_TOPICS_FILE = './data/used_topics.json';
-const MAX_USED_TOPICS  = 50;
+const USED_TOPICS_FILE        = './data/used_topics.json';
+const AUDIENCE_PERFORMANCE_FILE = './data/audience_performance.json';
+const MAX_USED_TOPICS         = 50;
 
-// Target audiences for the Finance Bending niche
+// ── Target audiences — occupation-first only (broad demographics removed) ─────
+// Removed: 'Millennials in Debt', 'Remote Workers', '9-to-5 Employees'
+// These have no community identity on YouTube — algorithm can't target them
 const TARGET_AUDIENCES = [
   'Nurses',
   'Teachers',
@@ -16,14 +20,41 @@ const TARGET_AUDIENCES = [
   'Freelancers',
   'Single Moms',
   'College Students',
-  'Remote Workers',
-  '9-to-5 Employees',
-  'Millennials in Debt',
-  'New Parents',
   'Side Hustlers',
   'Retail Workers',
+  'Truck Drivers',
+  'Real Estate Agents',
+  'Uber Drivers',
+  'New Parents',
 ];
 
+// ── Performance weight loader ─────────────────────────────────────────────────
+// Manual JSON: { "Nurses": 171, "Freelancers": 131, "Single Moms": 45 }
+// Audiences not in the file get DEFAULT_WEIGHT so new ones still get picked
+const DEFAULT_WEIGHT = 10;
+
+function loadAudienceWeights() {
+  try {
+    if (fs.existsSync(AUDIENCE_PERFORMANCE_FILE)) {
+      return JSON.parse(fs.readFileSync(AUDIENCE_PERFORMANCE_FILE, 'utf-8'));
+    }
+  } catch {}
+  return {};
+}
+
+// Weighted random pick — higher view count = higher probability
+// Weight = total views for that audience (or DEFAULT_WEIGHT if untracked)
+function weightedAudiencePick(audiences, weights) {
+  const total = audiences.reduce((sum, a) => sum + (weights[a] || DEFAULT_WEIGHT), 0);
+  let rand = Math.random() * total;
+  for (const a of audiences) {
+    rand -= (weights[a] || DEFAULT_WEIGHT);
+    if (rand <= 0) return a;
+  }
+  return audiences[audiences.length - 1];
+}
+
+// ── Used-topics helpers ───────────────────────────────────────────────────────
 function loadUsedTopics() {
   try {
     if (fs.existsSync(USED_TOPICS_FILE)) {
@@ -76,19 +107,23 @@ export class TopicAgent {
       };
     }
 
-    const usedTopics = loadUsedTopics();
+    const usedTopics       = loadUsedTopics();
+    const audienceWeights  = loadAudienceWeights();
 
-    // Pick a random target audience, avoiding back-to-back repeat of the same audience
+    // Log current weights so you can see what's driving selection
+    console.log('  📊 Audience weights loaded:', JSON.stringify(audienceWeights));
+
+    // Weighted pick — avoid back-to-back repeat of same audience
     let targetAudience;
     let attempts = 0;
     do {
-      targetAudience = TARGET_AUDIENCES[Math.floor(Math.random() * TARGET_AUDIENCES.length)];
+      targetAudience = weightedAudiencePick(TARGET_AUDIENCES, audienceWeights);
       attempts++;
       const lastTopic = usedTopics.length > 0 ? usedTopics[0].toLowerCase() : '';
       if (!lastTopic.includes(targetAudience.toLowerCase()) || attempts > 5) break;
     } while (true);
 
-    console.log(`  🔍 Finding Finance Bending topic for: ${targetAudience}...`);
+    console.log(`  🔍 Finding Finance Bending topic for: ${targetAudience} (weight: ${audienceWeights[targetAudience] || DEFAULT_WEIGHT})...`);
 
     const prompt = `Today is ${new Date().toDateString()}.
 
@@ -101,7 +136,7 @@ GOOD examples:
 - "Why Introverts Are Actually Wired to Build Wealth Faster"
 - "The Side Hustle That Works for Teachers Without Burning Out"
 - "How Single Moms Pay Off Debt in 12 Months on One Salary"
-- "The 9-to-5 Worker's Secret to Hitting $100k Savings in 2 Years"
+- "Freelancers: The HYSA Trick That Makes Irregular Income Work"
 
 Think about TRENDING finance topics RIGHT NOW:
 - High-yield savings accounts, CD rates
@@ -165,7 +200,7 @@ Respond ONLY in valid JSON (no markdown, no explanation):
         { targetAudience: 'Introverts', title: 'Introverts Build Wealth Faster — Here Is the Data', hook: 'Introverts are quietly winning at personal finance and nobody is talking about it.', context: 'Studies show introverts spend less on social activities, impulse purchases, and lifestyle inflation. Their natural tendency to research before buying and avoid peer pressure spending creates a powerful wealth-building advantage.' },
         { targetAudience: 'Freelancers', title: 'Freelancers: The Tax Strategy That Saves You $3k Every Year', hook: 'Every freelancer is overpaying taxes. Here is the fix.', context: 'Freelancers can legally deduct home office, equipment, software, health insurance, and retirement contributions. Most leave thousands on the table every year by not tracking these correctly.' },
         { targetAudience: 'Single Moms', title: 'Single Moms: 5 Money Moves That Actually Work on One Income', hook: 'You are doing the work of two people on one paycheck. These moves change the math.', context: 'Single mothers face unique financial pressure with one income supporting a household. But specific strategies around tax credits, childcare deductions, and automated saving can dramatically change the financial trajectory even on a tight budget.' },
-        { targetAudience: '9-to-5 Employees', title: '9-to-5 Workers: Hit $100k Savings Without a Side Hustle', hook: 'You do not need a side hustle. You need a system.', context: 'Most 9-to-5 workers are told to hustle more to build wealth. But optimizing 401k matching, HYSA rates, and expense automation can compound faster than most side businesses — with zero extra hours.' },
+        { targetAudience: 'Side Hustlers', title: 'Side Hustlers: Stop Losing 30% of Your Income to Taxes', hook: 'Your side hustle income is being eaten alive. Here is how to stop it.', context: 'Side hustle income is taxed as self-employment — meaning 15.3% SE tax on top of income tax. But quarterly estimated payments, home office deductions, and a SEP-IRA can cut that bill dramatically.' },
         { targetAudience: 'College Students', title: 'College Students: Start Investing With $50 and Crush Your Peers at 40', hook: 'The gap between starting at 20 vs 30 is worth $300,000. Not a typo.', context: 'Compound interest makes early investing wildly disproportionate. A college student investing $50/month starting at 20 will have significantly more at retirement than someone investing $500/month starting at 30.' },
       ];
       const pick = seeds[Math.floor(Math.random() * seeds.length)];

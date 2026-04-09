@@ -1,5 +1,5 @@
 // ScriptAgent.js — Writes VIRAL finance bending scripts for specific target audiences
-// v2 — Retention-optimized: fixes 11s drop-off, targets 70%+ APV for Shorts push
+// v3 — Dynamic tags per audience/topic + ctaText overlay field for VideoAgent
 import { GoogleGenAI } from '@google/genai';
 
 const CHANNEL_VOICE = `
@@ -90,9 +90,26 @@ Cut every word that doesn't add a number, a name, or a tension. Ruthless.
 ✅ [delete it entirely]
 
 RULE 5 — END WITH A TRUTH, NOT A REQUEST:
-The last line must be a bold, opinionated money statement specific to the audience.
+The last voiceover line must be a bold, opinionated money statement specific to the audience.
 ❌ "Follow for more tips!"
 ✅ "Most [audience] will ignore this. The ones who don't? They retire early."
+`;
+
+// ── CTA formula — audience-specific subscribe hook ────────────────────────────
+// This goes into ctaText (VideoAgent overlay), NOT the voiceover
+const CTA_FORMULA = `
+CTA TEXT RULES (this is a SCREEN OVERLAY — not spoken, not part of voiceoverText):
+- Must mention the audience directly by name
+- Must promise what the channel delivers specifically for them
+- Max 12 words — this appears as text on screen
+- No generic phrases like "like and subscribe" or "hit the bell"
+- Format: a single punchy sentence they'd actually want to read
+
+GOOD examples:
+- "Finance built for nurses. Follow for more."
+- "Money tactics made for freelancers. Follow."
+- "If nobody's teaching you this — we are. Follow."
+- "Single moms money content. Built different. Follow."
 `;
 
 // Retry wrapper
@@ -121,6 +138,19 @@ export class ScriptAgent {
     const isShort  = mode === 'short';
     const isRecap  = topic.isRecap === true;
     const audience = topic.targetAudience || 'General Audience';
+
+    // ── Dynamic tag builder — audience + topic specific ──────────────────────
+    // These replace the old hardcoded generic tag list
+    const audienceSlug    = audience.toLowerCase().replace(/\s+/g, ' ');
+    const topicKeyword    = (topic.searchKeyword || 'personal finance').toLowerCase();
+    const DYNAMIC_TAG_INSTRUCTION = `
+"tags": generate 10-12 YouTube tags that are SPECIFIC to this video.
+Mix these 3 layers:
+  1. Audience-specific (3-4 tags): "${audienceSlug} finance", "${audienceSlug} money tips", "${audienceSlug} investing", "${audienceSlug} budget"
+  2. Topic-specific (3-4 tags): based on "${topicKeyword}" — exact phrases someone would search
+  3. Channel broad (3-4 tags): "personal finance", "finance bending", "money hacks", "financial freedom"
+Return as a JSON array of strings. No duplicates. No generic filler tags.
+`;
 
     const formatInstructions = isRecap
       ? `
@@ -157,7 +187,7 @@ STRUCTURE:
 
 - [VISUAL CUE: final visual before outro]
 
-- Last line (35-45s): Bold financial truth specific to this audience.
+- Last voiceover line (35-45s): Bold financial truth specific to this audience.
   NOT a request. NOT "like and subscribe." A statement they'll screenshot.
 
 TONE: Like a finance-savvy friend sending you a voice memo. Direct. Punchy. Zero fluff.
@@ -190,6 +220,8 @@ ${HOOK_FORMULAS}
 
 ${RETENTION_RULES}
 
+${CTA_FORMULA}
+
 ${formatInstructions}
 
 FINAL RULES:
@@ -200,6 +232,7 @@ FINAL RULES:
 5. The content is about ${audience}'s money journey, not about the host.
 6. Include ALL [VISUAL CUE] tags in the voiceoverText — they are part of the output.
 7. The second-10 pattern interrupt is MANDATORY in every Short.
+8. ctaText is NOT spoken — it is a screen overlay for the last 4 seconds. Keep it under 12 words.
 
 Respond ONLY in valid JSON (no markdown, no backticks):
 {
@@ -207,8 +240,9 @@ Respond ONLY in valid JSON (no markdown, no backticks):
   "voiceoverText": "complete script with [VISUAL CUE] tags inline — under 55 words of actual speech for Shorts",
   "wordCount": "exact word count of voiceoverText excluding [VISUAL CUE] tags",
   "retentionNotes": "1-sentence summary of where the second-10 reset appears and what pattern interrupt was used",
+  "ctaText": "audience-specific subscribe overlay — max 12 words, shown on screen last 4 seconds, NOT spoken",
   "description": "YouTube description about the finance topic, max 400 chars, includes keywords",
-  "tags": ["personal finance","money","finance tips","wealth building","budgeting","saving money","financial freedom","money hacks"],
+  ${DYNAMIC_TAG_INSTRUCTION}
   "linkedInCaption": "LinkedIn finance insight for ${audience} — 3 punchy paragraphs, ends with [VIDEO_URL]",
   "visualNotes": "2-3 words describing best visuals (e.g. money wealth dark, luxury lifestyle finance)"
 }`;
@@ -239,10 +273,19 @@ Respond ONLY in valid JSON (no markdown, no backticks):
           if (cueTags < 3) {
             throw new Error(`Not enough [VISUAL CUE] tags: found ${cueTags}, need at least 3 — regenerating`);
           }
-          // Warn if no second-10 reset detected
+          // Validate second-10 reset
           if (!parsed.retentionNotes || parsed.retentionNotes.length < 20) {
             throw new Error('Missing retentionNotes — second-10 reset not confirmed — regenerating');
           }
+          // Validate ctaText exists and is short enough
+          if (!parsed.ctaText || parsed.ctaText.split(/\s+/).length > 14) {
+            throw new Error('Missing or too-long ctaText — regenerating');
+          }
+        }
+
+        // Validate tags are dynamic (not all generic)
+        if (parsed.tags && parsed.tags.length < 8) {
+          console.warn('  ⚠️  Fewer than 8 tags returned — check tag generation');
         }
 
         return { ...parsed, wordCount: parsed.wordCount || 'N/A' };
