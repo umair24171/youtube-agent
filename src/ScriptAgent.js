@@ -112,21 +112,33 @@ GOOD examples:
 - "Single moms money content. Built different. Follow."
 `;
 
-// Retry wrapper
-async function withRetry(fn, retries = 3, delayMs = 5000) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      console.warn(`  ⚠️  Gemini attempt ${attempt}/${retries} failed: ${err.message}`);
-      if (attempt < retries) {
-        console.warn(`  ⏳ Retrying in ${delayMs / 1000}s...`);
-        await new Promise(r => setTimeout(r, delayMs));
-      } else {
-        throw err;
+// Retry wrapper with model fallback — tries primary model first, then fallback models
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+
+async function withRetry(fn, retriesPerModel = 2, delayMs = 5000) {
+  let lastErr;
+  for (const model of GEMINI_MODELS) {
+    for (let attempt = 1; attempt <= retriesPerModel; attempt++) {
+      try {
+        return await fn(model);
+      } catch (err) {
+        lastErr = err;
+        const is503 = err.message && err.message.includes('503');
+        console.warn(`  ⚠️  Gemini [${model}] attempt ${attempt}/${retriesPerModel} failed: ${err.message}`);
+        if (attempt < retriesPerModel) {
+          const delay = delayMs * attempt;
+          console.warn(`  ⏳ Retrying in ${delay / 1000}s...`);
+          await new Promise(r => setTimeout(r, delay));
+        } else if (!is503) {
+          // Non-503 error (parse failure, etc.) — don't switch models, just throw
+          throw err;
+        }
       }
     }
+    const nextModel = GEMINI_MODELS[GEMINI_MODELS.indexOf(model) + 1];
+    if (nextModel) console.warn(`  🔄 Switching to fallback model: ${nextModel}`);
   }
+  throw lastErr;
 }
 
 export class ScriptAgent {
@@ -247,9 +259,9 @@ Respond ONLY in valid JSON (no markdown, no backticks):
   "visualNotes": "2-3 words describing best visuals (e.g. money wealth dark, luxury lifestyle finance)"
 }`;
 
-    const script = await withRetry(async () => {
+    const script = await withRetry(async (model) => {
       const response = await this.ai.models.generateContent({
-        model  : 'gemini-2.5-flash',
+        model,
         contents: prompt,
       });
 
