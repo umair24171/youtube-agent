@@ -20,7 +20,7 @@ async function sleep(ms) {
 }
 
 async function runPipeline() {
-  const notifier = new DiscordNotifier(process.env.DISCORD_WEBHOOK_YOUTUBE);
+  const notifier = new DiscordNotifier(DRY_RUN ? undefined : process.env.DISCORD_WEBHOOK_YOUTUBE);
 
   console.log('╔══════════════════════════════════════╗');
   console.log(`║  Finance Bending Pipeline | ${MODE.padEnd(8)}║`);
@@ -111,13 +111,13 @@ async function runPipeline() {
     }
 
     // ── CLEANUP: remove temp files once all cross-posting is done ───
-    for (const p of [videoPath, thumbnailPath, audioPath]) {
+    for (const p of (DRY_RUN ? [] : [videoPath, thumbnailPath, audioPath])) {
       try { fs.unlinkSync(p); } catch {}
     }
 
     // ── DONE ────────────────────────────────────────────────────────
     await notifier.send(
-      `✅ **Video Published!**\n` +
+      `✅ **${DRY_RUN ? "Draft generated (not published)" : "Video Published!"}**\n` +
       `📹 ${script.title}\n` +
       `🔗 ${videoUrl}\n` +
       `📊 Mode: \`${MODE}\` | Cues: ${visualCues.length} visual triggers`

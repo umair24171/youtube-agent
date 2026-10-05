@@ -1,7 +1,7 @@
 {
   "name": "youtube-automation-agent",
   "version": "1.0.0",
-  "description": "Fully automated YouTube pipeline — AI Automation & SaaS Building niche",
+  "description": "Fully automated YouTube pipeline \u2014 AI Automation & SaaS Building niche",
   "type": "module",
   "main": "src/youtube_index.js",
   "scripts": {
@@ -9,7 +9,10 @@
     "short": "MODE=short node src/youtube_index.js",
     "longform": "MODE=longform node src/youtube_index.js",
     "recap": "MODE=recap node src/youtube_index.js",
-    "dry-run": "DRY_RUN=true node src/youtube_index.js"
+    "dry-run": "DRY_RUN=true node src/youtube_index.js",
+    "buildzn:generate": "node src/buildzn_index.js generate",
+    "buildzn:readiness": "node src/buildzn_index.js readiness",
+    "buildzn:test": "node --test tests/buildzn.test.js"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.3.0",
