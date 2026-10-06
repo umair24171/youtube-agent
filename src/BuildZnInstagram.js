@@ -38,6 +38,13 @@ export class BuildZnInstagram {
   if(!videoUrl || !videoUrl.startsWith('https://'))throw new Error('Provide approved HTTPS video URL; no automatic public CDN uploads');
   if(!this.env.INSTAGRAM_GRAPH_USER_ID)throw new Error('INSTAGRAM_GRAPH_USER_ID missing');
   const receiptPath=path.join(dir,'publish-receipt.json');
+  // Exclusive filesystem creation serializes separate CLI processes as well as calls.
+  const lockPath=path.join(dir,'publish.lock');
+  let lock;
+  try { lock=fs.openSync(lockPath,'wx',0o600); }
+  catch(err) { if(err.code==='EEXIST')throw new Error('Publish already in progress; reconcile any stale lock before retry');throw err; }
+  try {
+  fs.writeFileSync(lock,JSON.stringify({pid:process.pid,startedAt:new Date().toISOString()}));
   if(fs.existsSync(receiptPath))throw new Error('Publish attempt already recorded; reconcile before retry');
   const hosted=await this.fetch(videoUrl,{signal:AbortSignal.timeout(30000)});
   if(!hosted.ok)throw new Error('Approved media URL is not reachable');
@@ -58,6 +65,8 @@ export class BuildZnInstagram {
   if(!result.id)throw new Error('Missing published media ID; reconcile receipt');
   fs.writeFileSync(receiptPath,JSON.stringify({status:'published',id:result.id}));
   const media=await this.request(result.id,{fields:'permalink'});
+  fs.writeFileSync(receiptPath,JSON.stringify({status:'published',id:result.id,permalink:media.permalink,videoSha256:review.videoSha256}));
   return {id:result.id,permalink:media.permalink};
+  } finally { fs.closeSync(lock);fs.unlinkSync(lockPath); }
  }
 }

@@ -50,3 +50,7 @@ Official references:
 ## Tests
 
 `npm run buildzn:test`: actual sample extraction, approval/tamper rejection before network, mocked official API processing/publish/permalink, failed processing, duplicate prevention. These API contract tests use mocks, not live posts. Real account readiness is tested separately. Nothing was posted during repair.
+
+## Concurrent publishing and interrupted runs
+
+An exclusive `publish.lock` is acquired before hosted-media verification and held through permalink lookup. A second process fails before network activity. Normal failures release the lock; an interrupted/killed process leaves it in place. Reconcile the account, container and receipt before manually removing a stale lock. Never remove the receipt to retry an uncertain publish. A successful receipt retains the media ID, permalink and approved video hash.
